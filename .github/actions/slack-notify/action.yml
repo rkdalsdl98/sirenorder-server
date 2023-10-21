@@ -1,0 +1,22 @@
+name: "slack-notify"
+description: "Slack notification"
+inputs:
+  status:
+    description: "Slack status"
+    required: false
+    default: '실패'
+  slack_incoming_url:
+    description: "Slack incoming url"
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Send slack
+      shell: bash
+      run: |
+        if [ "${{ inputs.status }}" = "성공" ]; then
+          MSG="{ \"text\":\"> \`${GITHUB_REF#refs/heads/}\` 브랜치에서 ${GITHUB_EVENT_NAME} 요청이 왔어요!\n 레포지토리 이동 => <https://github.com/${GITHUB_REPOSITORY}|${GITHUB_REPOSITORY}>\n(<https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}|${GITHUB_WORKFLOW}>) ✅\"}"
+        else
+          MSG="{ \"text\":\"> ${GITHUB_EVENT_NAME} 요청\n(<https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}|${GITHUB_WORKFLOW}>) 워크플로우 <https://github.com/${GITHUB_REPOSITORY}|${GITHUB_REPOSITORY}>\n><https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}/checks|${GITHUB_JOB}> 잡 ${{ inputs.status }}, 브랜치=\`${GITHUB_REF#refs/heads/}\` ⛔\"}"
+        fi
+        curl -X POST -H 'Content-type: application/json' --data "${MSG}" "${{ inputs.slack_incoming_url }}"
