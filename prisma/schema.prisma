@@ -1,0 +1,162 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["referentialActions"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model user {
+  uuid String @id
+  email String @unique
+  pass String
+  salt String
+  wallet wallet? @relation("UserWallet")
+  gifts gift[] @relation("Gift")
+  coupons String[]
+  order linkedorder?
+  orderhistory Json?
+  token Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model wallet {
+  uuid String @id
+  point Int @default(0)
+  stars Int @default(0)
+  user user @relation("UserWallet", references: [uuid], fields: [user_uid])
+  user_uid String @unique
+}
+
+model gift {
+  uuid String @id
+  coupon String
+  to String
+  from String
+  wrappingtype String @default("default")
+  user user @relation("Gift", references: [uuid], fields: [user_uid])
+  user_uid String
+}
+
+model coupon {
+  code String @unique
+  menuinfo Json
+  expirationperiod DateTime
+}
+
+model order {
+  uuid String @id
+  saleprice Int @default(0)
+  totalprice Int @default(0)
+  merchant_uid String @unique
+  menuinfo Json
+  order linkedorder?
+}
+
+// order 부분에 merchant_uid와 DB에 merchant uuid는 서로 다른것 이다.
+// menuinfo = { name, price, thumbnail, count, size, bottle, tempture }
+
+model linkedorder {
+  user user @relation(fields: [user_uid], references: [uuid], onDelete: NoAction, onUpdate: NoAction)
+  user_uid String @unique
+  order order @relation(fields: [order_uid], references: [uuid])
+  order_uid String @unique
+  store store @relation(fields: [store_uid], references: [uuid], onDelete: Cascade)
+  store_uid String @unique
+
+  @@id([user_uid, store_uid, order_uid])
+}
+
+model merchant {
+  uuid String @id
+  pass String
+  salt String
+  store store? @relation("Store")
+}
+
+model store {
+  uuid String @id
+  storename String
+  thumbnail String?
+  location Json
+  address String
+  order linkedorder?
+  merchant merchant @relation("Store", references: [uuid], fields: [owner_uid])
+  owner_uid String @unique
+  wallet storewallet? @relation("StoreWallet")
+  detail storedetail? @relation("StoreDetail")
+}
+
+model storedetail {
+  id Int @id @default(autoincrement())
+  decscription String?
+  images String[]
+  openhours Json?
+  sirenorderhours Json?
+  phonenumber String
+  parkinginfo String
+  waytocome String
+  store store @relation("StoreDetail", fields: [store_uid], references: [uuid])
+  store_uid String @unique
+}
+
+// openhoures = { ...weekdays: 'open time ~ close time' }
+// sirenorderhours = { sirenorder, dt } dt is Drive through
+
+model storewallet {
+  uuid String @id
+  store store @relation("StoreWallet", fields: [store_uid], references: [uuid])
+  store_uid String @unique
+  sales sales[] @relation("Sales")
+}
+
+model sales {
+  id Int @id @default(autoincrement())
+  amounts Int @default(0)
+  menuinfo Json
+  salesdate String
+  currwallet storewallet @relation("Sales", references: [uuid], fields: [wallet_uid])
+  wallet_uid String @unique
+}
+
+model menu {
+  id Int @id @default(autoincrement())
+  name String
+  en_name String
+  price Int @default(0)
+  thumbnail String
+  detail menudetail? @relation("MenuDetail")
+}
+
+model menudetail {
+  id Int @id @default(autoincrement())
+  size String @default("Short")
+  description String?
+  allergys String[]
+  menu menu @relation("MenuDetail", fields: [menu_id], references: [id])
+  menu_id Int @unique
+  nutritions nutrition[] @relation("Nutrition")
+}
+
+model nutrition {
+  id Int @id @default(autoincrement())
+  size String
+  calorie Decimal @default(0.0)
+  carbohydrate Decimal @default(0.0)
+  sugars Decimal @default(0.0)
+  salt Decimal @default(0.0)
+  protein Decimal @default(0.0)
+  fat Decimal @default(0.0)
+  cholesterol Decimal @default(0.0)
+  transfat Decimal @default(0.0)
+  saturatedfat Decimal @default(0.0)
+  caffeine Decimal @default(0.0)
+  currdetail menudetail @relation("Nutrition", references: [id], fields: [detail_id])
+  detail_id Int
+}
