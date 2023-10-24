@@ -1,24 +1,13 @@
 import { MailerModule } from '@nestjs-modules/mailer';
-import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import * as redisStore from 'cache-manager-ioredis';
+import { RedisModule } from './modules/redis.module';
+import { UserModule } from './modules/user.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-    }),
-    CacheModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        store: redisStore,
-        host: config.get<string>("SERVER_IP_DEV"),
-        port: config.get<number>("REDIS_PORT"),
-        ttl: config.get<number>("REDIS_TTL"),
-        isGlobal: true,
-      })
     }),
     MailerModule.forRootAsync({
       imports: [ConfigModule],
@@ -29,7 +18,9 @@ import * as redisStore from 'cache-manager-ioredis';
           from: `"${config.get<string>("EMAIL_FROM_USER_NAME")}" <${config.get<string>("AUTH_EMAIL")}>`,
         },
       })
-    })
+    }),
+    RedisModule,
+    UserModule,
   ],
   controllers: [],
   providers: [],

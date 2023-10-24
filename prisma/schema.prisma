@@ -20,7 +20,7 @@ model user {
   gifts gift[] @relation("Gift")
   coupons String[]
   order linkedorder?
-  orderhistory Json?
+  orderhistory Json[]
   token Json?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -40,8 +40,8 @@ model gift {
   to String
   from String
   wrappingtype String @default("default")
-  user user @relation("Gift", references: [uuid], fields: [user_uid])
-  user_uid String
+  user user @relation("Gift", references: [email], fields: [user_email])
+  user_email String
 }
 
 model coupon {
