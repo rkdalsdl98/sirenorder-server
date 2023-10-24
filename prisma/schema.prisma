@@ -136,7 +136,6 @@ model menu {
 
 model menudetail {
   id Int @id @default(autoincrement())
-  size String @default("Short")
   description String?
   allergys String[]
   menu menu @relation("MenuDetail", fields: [menu_id], references: [id])

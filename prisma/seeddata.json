@@ -1,0 +1,40 @@
+{
+    "1": {
+        "name": "아메리카노",
+        "en_name": "Americano",
+        "price": 2000,
+        "thumbnail": "",
+        "detail": {
+            "description": "고소한 맛이 나는 커피",
+            "allergys": [],
+            "nutritions": [
+                {
+                    "size": "default",
+                    "calorie": 12.2,
+                    "carbohydrate": 2.0,
+                    "sugars": 0.0,
+                    "salt": 2.4,
+                    "protein": 0.9,
+                    "fat": 0.1,
+                    "cholesterol": 0.0,
+                    "transfat": 0.0,
+                    "saturatedfat": 0.0,
+                    "caffeine": 204.2
+                },
+                {
+                    "size": "mega",
+                    "calorie": 16.7,
+                    "carbohydrate": 1.6,
+                    "sugars": 0.0,
+                    "salt": 0.7,
+                    "protein": 1.5,
+                    "fat": 0.3,
+                    "cholesterol": 0.0,
+                    "transfat": 0.0,
+                    "saturatedfat": 0.0,
+                    "caffeine": 290.8
+                }
+            ]
+        }
+    }
+}
