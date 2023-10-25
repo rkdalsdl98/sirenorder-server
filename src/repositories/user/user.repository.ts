@@ -1,9 +1,9 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { IRepository } from "src/common/interface/irepository";
 import { PrismaService } from "src/services/prisma.service";
 import { OrderHistory, UserEntity } from "./user.entity";
 import { MenuInfo } from "src/common/type/order.typs";
-import { GiftEntity } from "./gift.entity";
+import { ERROR } from "src/common/type/response.type";
 
 @Injectable()
 export class UserRepository implements IRepository<UserEntity> {
@@ -18,6 +18,10 @@ export class UserRepository implements IRepository<UserEntity> {
      */
     async transaction(querys: []) : Promise<[]> {
         return await this.prisma.$transaction(querys)
+        .catch(err => {
+            Logger.error("트랙잭션중 오류가 발생했습니다.", err.toString(), UserRepository)
+            throw ERROR.ServerDatabaseError
+        })
     }
 
     async getMany(): Promise<UserEntity[]> {
@@ -27,11 +31,41 @@ export class UserRepository implements IRepository<UserEntity> {
                 gifts: true,
                 order: true,
             }
+        })
+        .catch(err => {
+            Logger.error("데이터를 불러오는데 실패했습니다.", err.toString(), UserRepository)
+            throw ERROR.ServerDatabaseError
         })).map(e => this.parsingEntity(e))
     }
 
     async getBy(email: string): Promise<UserEntity> {
-        return this.parsingEntity(await this.prisma.user.findUnique({ where: { email } }))
+        return this.parsingEntity(await this.prisma.user.findUnique({ where: { email } })
+        .catch(err => {
+            Logger.error("데이터를 불러오는데 실패했습니다.", err.toString(), UserRepository)
+            throw ERROR.ServerDatabaseError
+        }))
+    }
+
+    async create(args: { 
+        salt: string, 
+        hash: string, 
+        nickname: string, 
+        email: string,
+        uuid: string,
+     }): Promise<UserEntity> {
+        return this.parsingEntity(await this.prisma.user.create({
+            data: {
+                uuid: args.uuid,
+                email: args.email,
+                nickname: args.nickname,
+                pass: args.hash,
+                salt: args.salt,
+            }
+        })
+        .catch(err => {
+            Logger.error("데이터를 저장하는데 실패했습니다.", err.toString(), UserRepository)
+            throw ERROR.ServerDatabaseError
+        }))
     }
 
     /**
@@ -43,6 +77,7 @@ export class UserRepository implements IRepository<UserEntity> {
     async updateBy(updateData: Omit<
         UserEntity,
         | "uuid"
+        | "email"
         | "pass"
         | "salt"
         | "order"
@@ -53,7 +88,7 @@ export class UserRepository implements IRepository<UserEntity> {
         return this.parsingEntity(await this.prisma.user.update({
             where: { email },
             data: {
-                email: updateData.email,
+                nickname: updateData.nickname,
                 wallet: {
                     update: {
                         point: updateData.wallet?.point,
@@ -61,17 +96,26 @@ export class UserRepository implements IRepository<UserEntity> {
                     }
                 }
             }
+        })
+        .catch(err => {
+            Logger.error("데이터를 갱신하는데 실패했습니다.", err.toString(), UserRepository)
+            throw ERROR.ServerDatabaseError
         }))
     }
 
     async deleteBy(email: string): Promise<boolean> {
-        return !!(await this.prisma.user.delete({ where: { email } }))
+        return !!(await this.prisma.user.delete({ where: { email } })
+        .catch(err => {
+            Logger.error("데이터를 삭제하는데 실패했습니다.", err.toString(), UserRepository)
+            throw ERROR.ServerDatabaseError
+        }))
     }
 
     parsingEntity(e) : UserEntity {
         return {
             uuid: e.uuid,
             email: e.email,
+            nickname: e.nickname,
             pass: e.pass,
             salt: e.salt,
             wallet: e.wallet,

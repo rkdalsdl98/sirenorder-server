@@ -1,6 +1,6 @@
-import { CACHE_MANAGER } from "@nestjs/cache-manager";
-import { Cache } from 'cache-manager';
 import { Inject, Injectable, Logger } from "@nestjs/common";
+import { CACHE_MANAGER } from '@nestjs/cache-manager/dist';
+import { Cache } from 'cache-manager';
 import { ERROR } from "src/common/type/response.type";
 
 @Injectable()

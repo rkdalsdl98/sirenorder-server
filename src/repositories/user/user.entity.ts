@@ -5,6 +5,7 @@ import { WalletEntity } from "./wallet.entity"
 export interface UserEntity {
     readonly uuid: string
     readonly email: string
+    readonly nickname: string
     readonly pass: string
     readonly salt: string
     readonly wallet: WalletEntity | null

@@ -1,4 +1,4 @@
-export type SubStatus = "ReLogin" | "TypeException" | "ForgeryData" | "ExpiredToken"
+export type SubStatus = "ReLogin" | "TypeException" | "ForgeryData" | "ExpiredToken" | "NotValidCode"
 
 export type SuccessResponse<T> = {
     readonly data: T
@@ -9,7 +9,7 @@ export type SuccessResponse<T> = {
 export type FailedResponse = {
     readonly message: string
     readonly status: number
-    readonly substatus?: SubStatus
+    substatus?: SubStatus
 }
 
 export const ERROR : Record<string, FailedResponse> = {

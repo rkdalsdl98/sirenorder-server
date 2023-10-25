@@ -14,6 +14,7 @@ datasource db {
 model user {
   uuid String @id
   email String @unique
+  nickname String
   pass String
   salt String
   wallet wallet? @relation("UserWallet")

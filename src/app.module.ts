@@ -6,6 +6,8 @@ import { UserModule } from './modules/user.module';
 
 @Module({
   imports: [
+    RedisModule,
+    UserModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -19,10 +21,6 @@ import { UserModule } from './modules/user.module';
         },
       })
     }),
-    RedisModule,
-    UserModule,
-  ],
-  controllers: [],
-  providers: [],
+  ]
 })
 export class AppModule {}
