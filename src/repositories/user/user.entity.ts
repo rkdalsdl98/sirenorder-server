@@ -13,7 +13,7 @@ export interface UserEntity {
     readonly coupons: string[]
     readonly order: OrderEntity | null
     readonly orderhistory: OrderHistory[]
-    readonly token: { accesstoken: string, refreshtoken: string }
+    readonly token: { accesstoken: string, refreshtoken: string } | null
     readonly createdAt: Date
     readonly updatedAt: Date
 }

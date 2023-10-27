@@ -2,7 +2,7 @@ import { ISendMailOptions, MailerService } from "@nestjs-modules/mailer"
 import { Injectable } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
 import { SentMessageInfo } from "nodemailer"
-import { MailTemplate } from "src/common/type/mail.type"
+import { MailTemplate } from "../common/type/mail.type"
 
 @Injectable()
 export class EmailService {

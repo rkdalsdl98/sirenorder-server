@@ -1,11 +1,11 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { UserRepository } from "src/repositories/user/user.repository";
+import { UserRepository } from "../repositories/user/user.repository";
 import { RedisService } from "./redis.service";
 import { EmailService } from "./mail.service";
 import { AuthService } from "./auth.service";
 import { ConfigService } from "@nestjs/config";
-import { ERROR } from "src/common/type/response.type";
-import { UserEntity } from "src/repositories/user/user.entity";
+import { ERROR } from "../common/type/response.type";
+import { UserEntity } from "../repositories/user/user.entity";
 
 @Injectable()
 export class UserService {

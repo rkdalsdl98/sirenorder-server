@@ -1,4 +1,10 @@
-export type SubStatus = "ReLogin" | "TypeException" | "ForgeryData" | "ExpiredToken" | "NotValidCode"
+export type SubStatus = 
+| "ReLogin" 
+| "TypeException" 
+| "ForgeryData" 
+| "ExpiredToken" 
+| "NotValidCode"
+| "Duplicated"
 
 export type SuccessResponse<T> = {
     readonly data: T
@@ -13,6 +19,7 @@ export type FailedResponse = {
 }
 
 export const ERROR : Record<string, FailedResponse> = {
+    "Accepted": { status: 202, message: "요청이 성공적으로 전달되었으나 처리가 되지 않을 수 있습니다." },
     "NonAuthoritativeInformation": { status: 203, message: "입력한 정보가 맞는지 한번 더 확인해주세요." },
     "NotFoundData": { status: 204, message: "요청한 자료를 찾을 수 없습니다." },
     "BadRequest": { status: 400, message: "잘못된 요청 입니다." },

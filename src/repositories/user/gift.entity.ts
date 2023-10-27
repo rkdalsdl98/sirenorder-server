@@ -1,4 +1,4 @@
-import { GiftWrappingType } from "src/common/type/gift.type"
+import { GiftWrappingType } from "../../common/type/gift.type"
 
 export interface GiftEntity {
     readonly uuid: string

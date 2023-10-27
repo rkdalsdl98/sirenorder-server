@@ -1,9 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { IRepository } from "src/common/interface/irepository";
-import { PrismaService } from "src/services/prisma.service";
+import { IRepository } from "../../common/interface/irepository";
+import { PrismaService } from "../../services/prisma.service";
 import { OrderHistory, UserEntity } from "./user.entity";
-import { MenuInfo } from "src/common/type/order.typs";
-import { ERROR } from "src/common/type/response.type";
+import { MenuInfo } from "../../common/type/order.typs";
+import { ERROR } from "../../common/type/response.type";
 
 @Injectable()
 export class UserRepository implements IRepository<UserEntity> {
@@ -130,7 +130,7 @@ export class UserRepository implements IRepository<UserEntity> {
                     merchant_uid: e.orderhistory[key]["merchant_uid"]
                 } as OrderHistory
             }),
-            token: e.token as { accesstoken: string, refreshtoken: string },
+            token: e.token === undefined ? null : e.token as { accesstoken: string;refreshtoken: string },
             createdAt: e.createdAt,
             updatedAt: e.updatedAt
         }

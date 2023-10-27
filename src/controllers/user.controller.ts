@@ -1,9 +1,9 @@
 import { TypedQuery, TypedRoute } from "@nestia/core";
 import { Controller } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
-import { ERROR, TryCatch } from "src/common/type/response.type";
-import { UserQuery } from "src/query/user.query";
-import { UserService } from "src/services/user.service";
+import { ERROR, TryCatch } from "../common/type/response.type";
+import { UserQuery } from "../query/user.query";
+import { UserService } from "../services/user.service";
 
 @Controller('user')
 @ApiTags("유저")
@@ -20,11 +20,13 @@ export class UserController {
     | typeof ERROR.ServerCacheError
     | typeof ERROR.FailedSendMail
     >> {
-        const result = await this.userService.registUser(query.email, query.pass, query.nickname)
-        return { 
-            data: result, 
-            status: 201
-        }
+        try {
+            const result = await this.userService.registUser(query.email, query.pass, query.nickname)
+            return { 
+                data: result, 
+                status: 201
+            }
+        } catch(e) { return e }
     }
 
     @TypedRoute.Post("regist/verify")
@@ -35,11 +37,13 @@ export class UserController {
     | typeof ERROR.ServerDatabaseError
     | typeof ERROR.NotFound
     >> {
-        const result = await this.userService.verifyCode(query.code)
-        return {
-            data: result,
-            status: 201
-        }
+        try {
+            const result = await this.userService.verifyCode(query.code)
+            return {
+                data: result,
+                status: 201
+            }
+        } catch(e) { return e }
     }
 
     @TypedRoute.Post("login")
