@@ -3,11 +3,13 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RedisModule } from './modules/redis.module';
 import { UserModule } from './modules/user.module';
+import { AuthModule } from './modules/auth.module';
 
 @Module({
   imports: [
     RedisModule,
     UserModule,
+    AuthModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),

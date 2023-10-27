@@ -9,6 +9,7 @@ import { RedisService } from "../../services/redis.service"
 import { MailerModule } from "@nestjs-modules/mailer"
 import { RedisModule } from "../../modules/redis.module"
 import { UserEntity } from "src/repositories/user/user.entity"
+import { AuthModule } from "src/modules/auth.module"
 
 let db : UserEntity[] = []
 
@@ -24,6 +25,7 @@ describe("UserService", () => {
         const module: TestingModule = await Test.createTestingModule({
             imports: [
                 RedisModule,
+                AuthModule,
                 ConfigModule.forRoot({
                     isGlobal: true,
                   }),
@@ -59,6 +61,9 @@ describe("UserService", () => {
     it("종속성 모듈 로드", () => {
         expect(service).toBeDefined()
         expect(repository).toBeDefined()
+        expect(mailer).toBeDefined()
+        expect(auth).toBeDefined()
+        expect(config).toBeDefined()
     })
 
     const registOptions = {
@@ -103,10 +108,10 @@ describe("UserService", () => {
         jest.spyOn(service, "verifyCode").mockImplementation(async (code: string) => {
             if(redis[code]) {
                 const data = redis[code]
-                const verify = auth.verify({ pass: "123456789" }, data.salt, data.hash)
+                const verify = auth.verifyPass({ pass: "123456789" }, data.salt, data.hash)
                 return verify
             }
-            console.log("Not found code")
+            console.log("Not found secret code")
             return false
         })
 

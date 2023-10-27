@@ -1,12 +1,15 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { pbkdf2Sync, randomBytes } from "crypto";
+import { IPayload } from "src/common/interface/ipayload";
+import { JwtFactory } from "src/common/jwt/jwtfactory";
 import { v4 } from "uuid"
 
 @Injectable()
 export class AuthService {
     constructor(
         private readonly config: ConfigService,
+        private readonly jwtFactory: JwtFactory,
     ){}
 
     /**
@@ -47,9 +50,19 @@ export class AuthService {
      * @param comparedHash 
      * @returns boolean
      */
-    verify(data: Object, salt: string, comparedHash: string) : boolean {
+    verifyPass(data: Object, salt: string, comparedHash: string) : boolean {
         const { hash } = this.encryption(data, salt)
         return hash === comparedHash
+    }
+
+    async punblishToken(payload: Object | Buffer) : 
+    Promise<{ accessToken: string }> {
+        return await this.jwtFactory.publishToken(payload)
+    }
+
+    async verifyToken(token: string) : 
+    Promise<{ payload: IPayload | null }> {
+        return await this.jwtFactory.verifyToken(token)
     }
 
     /**
