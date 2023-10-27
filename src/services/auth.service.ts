@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { pbkdf2Sync, randomBytes } from "crypto";
-import { IPayload } from "src/common/interface/ipayload";
-import { JwtFactory } from "src/common/jwt/jwtfactory";
+import { IPayload } from "../common/interface/ipayload";
+import { JwtFactory } from "../common/jwt/jwtfactory";
 import { v4 } from "uuid"
 
 @Injectable()

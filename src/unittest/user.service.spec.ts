@@ -1,15 +1,17 @@
-import { UserService } from "../../services/user.service"
+import { UserService } from "../services/user.service"
 import { Test, TestingModule } from "@nestjs/testing"
-import { UserRepository } from "../../repositories/user/user.repository"
-import { PrismaService } from "../../services/prisma.service"
-import { EmailService } from "../../services/mail.service"
-import { AuthService } from "../../services/auth.service"
+import { UserRepository } from "../repositories/user/user.repository"
+import { PrismaService } from "../services/prisma.service"
+import { EmailService } from "../services/mail.service"
+import { AuthService } from "../services/auth.service"
 import { ConfigModule, ConfigService } from "@nestjs/config"
-import { RedisService } from "../../services/redis.service"
+import { RedisService } from "../services/redis.service"
 import { MailerModule } from "@nestjs-modules/mailer"
-import { RedisModule } from "../../modules/redis.module"
-import { UserEntity } from "src/repositories/user/user.entity"
-import { AuthModule } from "src/modules/auth.module"
+import { RedisModule } from "../modules/redis.module"
+import { UserEntity } from "../repositories/user/user.entity"
+import { AuthModule } from "../modules/auth.module"
+import { JwtFactory } from "../common/jwt/jwtfactory"
+import { JwtService } from "@nestjs/jwt"
 
 let db : UserEntity[] = []
 
@@ -32,12 +34,12 @@ describe("UserService", () => {
                 MailerModule.forRootAsync({
                 imports: [ConfigModule],
                 inject: [ConfigService],
-                useFactory: (config: ConfigService) => ({
-                    transport: `smtps://${config.get<string>("AUTH_EMAIL")}:${config.get<string>("AUTH_PASSWORD")}@${config.get<string>("EMAIL_HOST")}`,
-                    defaults: {
-                    from: `"${config.get<string>("EMAIL_FROM_USER_NAME")}" <${config.get<string>("AUTH_EMAIL")}>`,
-                    },
-                })
+                    useFactory: (config: ConfigService) => ({
+                        transport: `smtps://${config.get<string>("AUTH_EMAIL")}:${config.get<string>("AUTH_PASSWORD")}@${config.get<string>("EMAIL_HOST")}`,
+                        defaults: {
+                        from: `"${config.get<string>("EMAIL_FROM_USER_NAME")}" <${config.get<string>("AUTH_EMAIL")}>`,
+                        },
+                    })
                 }),
             ],
             providers: [
@@ -45,6 +47,8 @@ describe("UserService", () => {
                 UserRepository,
                 PrismaService,
                 EmailService,
+                JwtService,
+                JwtFactory,
                 AuthService,
                 ConfigService,
                 RedisService,
