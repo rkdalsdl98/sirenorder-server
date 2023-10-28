@@ -4,6 +4,7 @@ import { PrismaService } from "../../services/prisma.service";
 import { OrderHistory, UserEntity } from "./user.entity";
 import { MenuInfo } from "../../common/type/order.typs";
 import { ERROR } from "../../common/type/response.type";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 @Injectable()
 export class UserRepository implements IRepository<UserEntity> {
@@ -38,9 +39,28 @@ export class UserRepository implements IRepository<UserEntity> {
         })).map(e => this.parsingEntity(e))
     }
 
-    async getBy(email: string): Promise<UserEntity> {
-        return this.parsingEntity(await this.prisma.user.findUnique({ where: { email } })
+    async getBy(args: {
+        email?: string,
+        accesstoken?: string,
+    }): Promise<UserEntity> {
+        return this.parsingEntity(await this.prisma.user.findUnique({ 
+            where: { 
+                email: args.email,
+                accesstoken: args.accesstoken,
+            },
+            include: {
+                wallet: true,
+                gifts: true,
+                order: true,
+            }
+        })
         .catch(err => {
+            if(err instanceof PrismaClientKnownRequestError) {
+                switch(err.code) {
+                    case "P2025":
+                        throw ERROR.NotFoundData
+                }
+            }
             Logger.error("데이터를 불러오는데 실패했습니다.", err.toString(), UserRepository)
             throw ERROR.ServerDatabaseError
         }))
@@ -60,6 +80,11 @@ export class UserRepository implements IRepository<UserEntity> {
                 nickname: args.nickname,
                 pass: args.hash,
                 salt: args.salt,
+            },
+            include: {
+                wallet: true,
+                gifts: true,
+                order: true,
             }
         })
         .catch(err => {
@@ -74,30 +99,36 @@ export class UserRepository implements IRepository<UserEntity> {
      * @param email 
      * @returns updated user data
      */
-    async updateBy(updateData: Omit<
-        UserEntity,
-        | "uuid"
-        | "email"
-        | "pass"
-        | "salt"
-        | "order"
-        | "gifts"
-        | "createdAt"
-        | "updatedAt"
-        >, email: string): Promise<UserEntity> {
+    async updateBy(
+        updateData: Partial<UserEntity>, 
+        email: string
+    ): Promise<UserEntity> {
         return this.parsingEntity(await this.prisma.user.update({
             where: { email },
             data: {
                 nickname: updateData.nickname,
+                accesstoken: updateData.accesstoken,
+                refreshtoken: updateData.refreshtoken,
                 wallet: {
                     update: {
                         point: updateData.wallet?.point,
                         stars: updateData.wallet?.stars,
                     }
                 }
+            },
+            include: {
+                wallet: true,
+                gifts: true,
+                order: true,
             }
         })
         .catch(err => {
+            if(err instanceof PrismaClientKnownRequestError) {
+                switch(err.code) {
+                    case "P2025":
+                        throw ERROR.NotFoundData
+                }
+            }
             Logger.error("데이터를 갱신하는데 실패했습니다.", err.toString(), UserRepository)
             throw ERROR.ServerDatabaseError
         }))
@@ -106,6 +137,12 @@ export class UserRepository implements IRepository<UserEntity> {
     async deleteBy(email: string): Promise<boolean> {
         return !!(await this.prisma.user.delete({ where: { email } })
         .catch(err => {
+            if(err instanceof PrismaClientKnownRequestError) {
+                switch(err.code) {
+                    case "P2025":
+                        throw ERROR.NotFoundData
+                }
+            }
             Logger.error("데이터를 삭제하는데 실패했습니다.", err.toString(), UserRepository)
             throw ERROR.ServerDatabaseError
         }))
@@ -121,7 +158,7 @@ export class UserRepository implements IRepository<UserEntity> {
             wallet: e.wallet,
             gifts: e.gifts,
             coupons: e.coupons,
-            order: e.order === undefined ? null : e.order.order,
+            order: e.order,
             orderhistory: Object.keys(e.orderhistory).map(key => {
                 return {
                     saleprice: e.orderhistory[key]["saleprice"],
@@ -130,7 +167,8 @@ export class UserRepository implements IRepository<UserEntity> {
                     merchant_uid: e.orderhistory[key]["merchant_uid"]
                 } as OrderHistory
             }),
-            token: e.token === undefined ? null : e.token as { accesstoken: string;refreshtoken: string },
+            accesstoken: e.accesstoken,
+            refreshtoken: e.refreshtoken,
             createdAt: e.createdAt,
             updatedAt: e.updatedAt
         }

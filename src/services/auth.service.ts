@@ -55,14 +55,14 @@ export class AuthService {
         return hash === comparedHash
     }
 
-    async punblishToken(payload: Object | Buffer) : 
-    Promise<{ accessToken: string }> {
-        return await this.jwtFactory.publishToken(payload)
+    async punblishToken(payload: Object | Buffer, isRefresh: boolean = false) : 
+    Promise<{ token: string }> {
+        return await this.jwtFactory.publishToken(payload, isRefresh)
     }
 
-    async verifyToken(token: string) : 
+    async verifyToken(token: string, isRefresh: boolean = false) : 
     Promise<{ payload: IPayload | null }> {
-        return await this.jwtFactory.verifyToken(token)
+        return await this.jwtFactory.verifyToken(token, isRefresh)
     }
 
     /**

@@ -15,13 +15,13 @@ export class JwtFactory {
      * @param payload 발행될 토큰에 들어갈 데이터
      * @returns token { accessToken: string }
      */
-    async publishToken(payload: Buffer | Object) : 
-    Promise<{ accessToken: string }> {
-        const accessToken : string = await this.jwtService.signAsync(payload, {
+    async publishToken(payload: Buffer | Object, isRefresh: boolean) : 
+    Promise<{ token: string }> {
+        const token : string = await this.jwtService.signAsync(payload, {
             secret: this.config.get<string>("JWT_SECRET"),
-            expiresIn: (this.config.get<number>("JWT_EXPIRATION") ?? 30) * 60,
+            expiresIn: (this.config.get<number>("JWT_EXPIRATION") ?? 30) * 60 * (isRefresh ? 24 : 1),
         })
-        return { accessToken }
+        return { token }
     }
 
     /**
@@ -29,7 +29,7 @@ export class JwtFactory {
      * @param isRefresh 검증 할 토큰이 RefreshToken 인지
      * @returns IPayload | null
      */
-    async verifyToken(token: string, isRefresh: boolean = false) :
+    async verifyToken(token: string, isRefresh: boolean) :
     Promise<{ payload: IPayload | null }> {
         const payload = await this.jwtService.verifyAsync(token, { 
             secret: this.config.get<string>("JWT_SECRET"),

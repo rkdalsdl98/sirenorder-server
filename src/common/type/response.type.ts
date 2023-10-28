@@ -1,5 +1,5 @@
 export type SubStatus = 
-| "ReLogin" 
+| "NotEqualPass" 
 | "TypeException" 
 | "ForgeryData" 
 | "ExpiredToken" 

@@ -1,15 +1,35 @@
 import { CanActivate, ExecutionContext, Injectable, Logger } from "@nestjs/common";
 import { Request } from 'express';
-import { ERROR } from "../type/response.type";
+import { ERROR, FailedResponse } from "../type/response.type";
+import { AuthService } from "src/services/auth.service";
+import { IPayload } from "../interface/ipayload";
 
 @Injectable()
 export class AuthGuard implements CanActivate {
+    constructor(
+        private readonly auth: AuthService
+    ){}
+
     async canActivate(context: ExecutionContext) : Promise<boolean> {
         const req = context.switchToHttp().getRequest()
         const reqAddress = req.headers['x-forwarded-for'] ||  req.connection.remoteAddress
         const token = this._extractTokenFromHeader(req)
-        if(token === null) throw ERROR.UnAuthorized
+        if(token === null) {
+            req.user = ERROR.UnAuthorized
+            return true
+        }
         
+        const payload = await this._getPayload(token)
+        if(payload !== null && "email" in payload) {
+            if(!payload.email || !/^[0-9a-zA-Z]+@[a-zA-Z]+.[a-zA-Z]{2,3}$/g.test(`${payload.email}`)) {
+                Logger.error(`[이메일 형식이 아님] 요청 아이피: ${reqAddress}`, AuthGuard.name)
+                req.user = ERROR.UnAuthorized
+                return true
+            }
+            req.user = payload
+        } else if(payload === null) req.user = null
+        else req.user = payload
+
         return true
     }
 
@@ -17,5 +37,13 @@ export class AuthGuard implements CanActivate {
         const [ type, token ] = request.headers.authorization?.split(" ") ?? []
         if(!type || type !== "Bearer") return null
         return token
+    }
+
+    private async _getPayload(token: string) :
+    Promise<IPayload | null | FailedResponse> {
+        try {
+            let { payload } = await this.auth.verifyToken(token)
+            return payload
+        } catch(e) { return e }
     }
 }
