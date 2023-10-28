@@ -109,37 +109,37 @@ describe("UserService", () => {
                 registOptions.nickname,
             )).toEqual(true)
         })
-    })
-
-    it("인증 코드 검증", async () => {
-        jest.spyOn(service, "verifyCode").mockImplementation(async (code: string) => {
-            if(redis[code]) {
-                const data = redis[code]
-                const user : UserEntity = {
-                    uuid: auth.getRandUUID(),
-                    email: data.email,
-                    nickname: data.nickname,
-                    salt: data.salt,
-                    pass: data.hash,
-                    wallet: null,
-                    gifts: [],
-                    coupons: [],
-                    order: null,
-                    orderhistory: [],
-                    accesstoken: null,
-                    refreshtoken: null,
-                    createdAt: new Date(Date.now()),
-                    updatedAt: new Date(Date.now()),
+        
+        it("인증 코드 검증", async () => {
+            jest.spyOn(service, "verifyCode").mockImplementation(async (code: string) => {
+                if(redis[code]) {
+                    const data = redis[code]
+                    const user : UserEntity = {
+                        uuid: auth.getRandUUID(),
+                        email: data.email,
+                        nickname: data.nickname,
+                        salt: data.salt,
+                        pass: data.hash,
+                        wallet: null,
+                        gifts: [],
+                        coupons: [],
+                        order: null,
+                        orderhistory: [],
+                        accesstoken: null,
+                        refreshtoken: null,
+                        createdAt: new Date(Date.now()),
+                        updatedAt: new Date(Date.now()),
+                    }
+                    
+                    db.push(user)
+                    return true
                 }
-                
-                db.push(user)
-                return true
-            }
-            console.log("Not found secret code")
-            return false
+                console.log("Not found secret code")
+                return false
+            })
+    
+            expect(await service.verifyCode("123456")).toEqual(true)
         })
-
-        expect(await service.verifyCode("123456")).toEqual(true)
     })
 
     let testingUser : UserEntity
