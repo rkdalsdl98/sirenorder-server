@@ -30,7 +30,7 @@ export class JwtFactory {
      * @returns IPayload | null
      */
     async verifyToken(token: string, isRefresh: boolean) :
-    Promise<{ payload: IPayload | null }> {
+    Promise<{ payload: IPayload }> {
         const payload = await this.jwtService.verifyAsync(token, { 
             secret: this.config.get<string>("JWT_SECRET"),
             ignoreExpiration: true,
@@ -38,6 +38,7 @@ export class JwtFactory {
         
         const { exp } = payload
         const now = Date.now() / 1000
+        payload.authorized = true
         
         // Refreshtoken일 경우 에러 스로잉
         // 아니라면 null payload 반환하여 Refreshtoken으로 재요청 요구
@@ -47,7 +48,7 @@ export class JwtFactory {
                 error.substatus = "ExpiredToken"
                 throw error
             }
-            return { payload: null }
+            payload.authorized = false
         }
         
         if("email" in payload) {

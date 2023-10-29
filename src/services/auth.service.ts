@@ -61,7 +61,7 @@ export class AuthService {
     }
 
     async verifyToken(token: string, isRefresh: boolean = false) : 
-    Promise<{ payload: IPayload | null }> {
+    Promise<{ payload: IPayload }> {
         return await this.jwtFactory.verifyToken(token, isRefresh)
     }
 

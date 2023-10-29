@@ -20,16 +20,14 @@ export class AuthGuard implements CanActivate {
         }
         
         const payload = await this._getPayload(token)
-        if(payload !== null && "email" in payload) {
+        if("email" in payload) {
             if(!payload.email || !/^[0-9a-zA-Z]+@[a-zA-Z]+.[a-zA-Z]{2,3}$/g.test(`${payload.email}`)) {
                 Logger.error(`[이메일 형식이 아님] 요청 아이피: ${reqAddress}`, AuthGuard.name)
                 req.user = ERROR.UnAuthorized
                 return true
             }
             req.user = payload
-        } else if(payload === null) req.user = null
-        else req.user = payload
-
+        } else req.user = ERROR.UnAuthorized
         return true
     }
 
@@ -40,7 +38,7 @@ export class AuthGuard implements CanActivate {
     }
 
     private async _getPayload(token: string) :
-    Promise<IPayload | null | FailedResponse> {
+    Promise<IPayload | FailedResponse> {
         try {
             let { payload } = await this.auth.verifyToken(token)
             return payload

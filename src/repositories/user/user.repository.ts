@@ -41,12 +41,10 @@ export class UserRepository implements IRepository<UserEntity> {
 
     async getBy(args: {
         email?: string,
-        accesstoken?: string,
     }): Promise<UserEntity> {
         return this.parsingEntity(await this.prisma.user.findUnique({ 
             where: { 
                 email: args.email,
-                accesstoken: args.accesstoken,
             },
             include: {
                 wallet: true,
@@ -64,6 +62,10 @@ export class UserRepository implements IRepository<UserEntity> {
             Logger.error("데이터를 불러오는데 실패했습니다.", err.toString(), UserRepository)
             throw ERROR.ServerDatabaseError
         }))
+    }
+
+    async getByToken() {
+        return await this.prisma.$queryRaw`SELECT * FROM user;`
     }
 
     async create(args: { 

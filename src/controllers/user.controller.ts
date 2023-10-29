@@ -5,7 +5,6 @@ import { ERROR, TryCatch } from "../common/type/response.type";
 import { UserQuery } from "../query/user.query";
 import { UserService } from "../services/user.service";
 import { AuthGuard } from "src/common/guards/auth.guard";
-import { UserEntity } from "src/repositories/user/user.entity";
 import { AuthDecorator } from "src/common/decorators/auth.decorator";
 import { UserDto } from "src/dto/user.dto";
 
@@ -15,6 +14,11 @@ export class UserController {
     constructor(
         private readonly userService: UserService
     ){}
+
+    @TypedRoute.Get()
+    async test() {
+        return await this.userService.test()
+    }
 
     @TypedRoute.Post("regist")
     async registUser(
@@ -79,14 +83,10 @@ export class UserController {
     | typeof ERROR.UnAuthorized
     >> {
         try {
-            if(data.payload === null) {
-                const result = await this.userService.checkRefresh(data.token)
-                return {
-                    data: result,
-                    status: 201,
-                }
-            } else if("email" in data.payload) {
-                const result = await this.userService.loginByEmail(data.payload.email)
+            if("email" in data.payload) {
+                let result : UserDto
+                if("token" in data.payload) result = await this.userService.checkRefresh(data.payload.email, data.payload.token)
+                else result = await this.userService.loginByEmail(data.payload.email)
                 return {
                     data: result,
                     status: 201,

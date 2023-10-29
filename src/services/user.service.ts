@@ -78,17 +78,9 @@ export class UserService {
             throw error
         }
         const createdUser = await this.userRepository.create({ ...data, uuid: this.auth.getRandUUID() })
-        await this.redis.get<UserEntity[]>("users", UserService.name)
-        .then(async caches => {
-            caches = caches === null ? [] : caches
-            caches.push(createdUser)
-            await this.redis.set("users", caches, UserService.name)
-            await this.redis.delete(code, UserService.name)
-        })
-        .catch(err => {
-            Logger.error("캐시처리실패")
-            throw err
-        })
+        await this._upsertCache(createdUser)
+        .then(async _=> await this.redis.delete(code, UserService.name))
+        
         return true
     }
 
@@ -104,12 +96,7 @@ export class UserService {
      */
     async loginByPass(email: string, pass: string) :
     Promise<UserDto> {
-        const findUser = await this.userRepository.getBy({ email })
-        .catch(err => {
-            Logger.error("유저 정보조회 실패") 
-            throw err
-         })
-
+        const findUser : UserEntity = await this._findUser(email)
         const isVerify = this.auth.verifyPass({ pass }, findUser.salt, findUser.pass)
         if(isVerify) {
             // accesstoken과 refreshtoken 발행
@@ -118,6 +105,8 @@ export class UserService {
                 accesstoken: accesstoken,
                 refreshtoken: refreshtoken,
             }, findUser.email)
+
+            await this._upsertCache(user)
             return { ...user } as UserDto
         }
         var error = ERROR.UnAuthorized
@@ -132,12 +121,7 @@ export class UserService {
      */
     async loginByEmail(email: string) : 
     Promise<UserDto> {
-        const findUser = await this.userRepository.getBy({ email })
-        .catch(err => {
-            Logger.error("유저 정보조회 실패") 
-            throw err
-        })
-        
+        const findUser : UserEntity = await this._findUser(email)
         return { ...findUser } as UserDto
     }
 
@@ -146,21 +130,16 @@ export class UserService {
      * @param token 
      * @returns User
      */
-    async checkRefresh(token: string) : 
+    async checkRefresh(email: string, token: string) : 
     Promise<UserDto> {
-        const findUser = await this.userRepository.getBy({ accesstoken: token })
-        .catch(err => {
-            Logger.error("유저 정보조회 실패") 
-            throw err
-        })
-        
+        const findUser = await this._findUserWithToken({ email, token })
         if(!findUser.refreshtoken) {
             var error = ERROR.UnAuthorized
             error.substatus = "ExpiredToken"
             throw error
         }
         else {
-            const { payload } = await this.auth.verifyToken(findUser.refreshtoken)
+            const { payload } = await this.auth.verifyToken(findUser.refreshtoken, true)
             .catch(err => {
                 Logger.error("만료된 토큰")
                 throw err
@@ -173,20 +152,27 @@ export class UserService {
                     accesstoken: accesstoken,
                     refreshtoken: refreshtoken,
                 }, findUser.email)
+
+                await this._upsertCache(user)
                 return { ...user } as UserDto
             }
 
             // 저장되어 있는 토큰 폐기
-            await this.userRepository.updateBy({
-                accesstoken: undefined,
-                refreshtoken: undefined,
+            const user = await this.userRepository.updateBy({
+                accesstoken: null,
+                refreshtoken: null,
             }, findUser.email)
+            await this._upsertCache(user)
             // 디비에 저장되어 있는 RefreshToken이 오염될 경우에만
             // 에러를 스로잉 함
             var error = ERROR.UnAuthorized
             error.substatus = "ForgeryData"
             throw error
         }
+    }
+
+    async deleteUser(email: string) {
+        await this.userRepository.deleteBy(email)
     }
 
     /**
@@ -207,5 +193,95 @@ export class UserService {
         return Array.isArray(str) 
         ? str.map(s => new Date(s))
         : new Date(str)
+    }
+
+    /**
+     * 캐시정보 갱신 or 등록
+     * @param cache 
+     */
+    private async _upsertCache(cache: UserEntity) :
+    Promise<void> {
+        let caches : UserEntity[] | null = await this.redis.get<UserEntity[]>("users", UserService.name)
+        .catch(err => {
+            Logger.error("캐시 업데이트 실패")
+            throw err
+        })
+
+        if(caches === null) await this.redis.set("users", [cache], UserService.name)
+        else {
+            let found : boolean = false
+            caches = caches.map(c => {
+                if(c.email === cache.email) {
+                    found = true
+                    return cache
+                }
+                return c
+            })
+
+            if(!found) caches.push(cache)
+            await this.redis.set("users", caches, UserService.name)
+        }
+    }
+
+    /**
+     * 유저정보조회
+     * 
+     * AccessToken이 만료된 경우 사용
+     * @param email 
+     * @param token
+     * @returns User
+     */
+    private async _findUserWithToken(args : Partial<{ email: string, token: string }>) :
+    Promise<UserEntity> {
+        const user : UserEntity = await this._findUser(args.email)
+
+        var error
+        if(user.accesstoken === args.token) return user
+        else if(user.accesstoken === null) error = ERROR.NotFoundData
+        else {
+            error = ERROR.UnAuthorized
+            error.substatus = "ForgeryData"
+        }
+
+        throw error
+    }
+
+    /**
+     * 유저정보조회
+     * 
+     * 캐시된 데이터가 있다면 캐시 데이터를 반환
+     * @param email 
+     * @returns User
+     */
+    private async _findUser(email?: string) :
+    Promise<UserEntity> {
+        const cache = (await this.redis.get<UserEntity[]>("users", UserService.name)
+        .catch(err => {
+            Logger.error("캐시로드오류")
+            throw err
+        }))?.find(c => c.email === email)
+
+        if(cache !== undefined) {
+            // 레디스에서 가져온 Date 타입이 string 타입으로 바꿔 반환해주기 때문에
+            // Date로 변환 해줌
+            // .toString()으로 string 타입 변환해주는 이유는
+            // 반환 타입이 Date로 출력되지만 Date타입 변수에 넣어주면 타입 오류반환함
+            const dates = this._stringToDate([
+                cache.createdAt.toString(),
+                cache.updatedAt.toString(),
+            ])
+            cache.createdAt = dates[0]
+            cache.updatedAt = dates[1]
+            return cache
+        }
+        return await this.userRepository.getBy({ email })
+        .catch(err => {
+            Logger.error("유저 정보조회 실패") 
+            throw err
+        })
+    }
+
+    async test() {
+        return await this.userRepository.getByToken()
     }
 }
