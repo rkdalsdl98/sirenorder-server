@@ -12,8 +12,9 @@ async function bootstrap() {
     credentials: true,
   })
   
-  //SwaggerSetting(app)
+  SwaggerSetting(app)
   app.useGlobalInterceptors(new LoggingInterceptor())
+  
   await app.listen(3000);
 }
 bootstrap();
