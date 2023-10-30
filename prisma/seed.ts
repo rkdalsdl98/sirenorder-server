@@ -48,12 +48,15 @@ async function main() {
             }
             querys.push(createOrUpdate)
         }
-        await prisma.$transaction(querys.map(query => 
+        await prisma.$transaction([
+            prisma.menu.deleteMany(),
+            ...querys.map(query => 
             prisma.menu.upsert({
                 create: query,
                 update: query,
                 where: { id: query.id }
-            })))
+            }))
+        ])
     } else return
 }
 
