@@ -84,6 +84,7 @@ model merchant {
 
 model store {
   uuid String @id
+  store_code Int @unique @default(autoincrement())
   storename String
   thumbnail String?
   location Json
