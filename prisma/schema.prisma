@@ -89,7 +89,7 @@ model store {
   thumbnail String?
   location Json
   address String
-  order linkedorder?
+  order linkedorder[]
   merchant merchant @relation("Store", references: [uuid], fields: [owner_uid], onDelete: Cascade)
   owner_uid String @unique
   wallet storewallet? @relation("StoreWallet")
