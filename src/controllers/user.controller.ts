@@ -14,12 +14,7 @@ export class UserController {
     constructor(
         private readonly userService: UserService
     ){}
-
-    @TypedRoute.Get()
-    async test() {
-        return await this.userService.test()
-    }
-
+    
     @TypedRoute.Post("regist")
     async registUser(
         @TypedQuery() query : UserQuery.UserQueryRegistOptions

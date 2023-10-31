@@ -7,7 +7,7 @@ import { ERROR } from "../../common/type/response.type";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 @Injectable()
-export class UserRepository implements IRepository<UserEntity> {
+export class UserRepository implements IRepository<UserEntity, undefined> {
     constructor(
         private readonly prisma: PrismaService
     ){}
@@ -63,11 +63,7 @@ export class UserRepository implements IRepository<UserEntity> {
             throw ERROR.ServerDatabaseError
         }))
     }
-
-    async getByToken() {
-        return await this.prisma.$queryRaw`SELECT * FROM user;`
-    }
-
+    
     async create(args: { 
         salt: string, 
         hash: string, 

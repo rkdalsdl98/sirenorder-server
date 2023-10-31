@@ -280,8 +280,4 @@ export class UserService {
             throw err
         })
     }
-
-    async test() {
-        return await this.userRepository.getByToken()
-    }
 }

@@ -88,6 +88,6 @@
     "testEnvironment": "node"
   },
   "prisma": {
-    "seed": "ts-node --transpile-only ./seed.ts"
+    "seed": "ts-node --transpile-only ./prisma/seed.ts"
   }
 }

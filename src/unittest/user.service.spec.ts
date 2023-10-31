@@ -15,7 +15,7 @@ import { JwtService } from "@nestjs/jwt"
 
 let db : UserEntity[] = []
 
-describe("UserService", () => {
+describe("[유저] 유닛테스트", () => {
     let service: UserService
     let redis: Record<string, { salt: string, hash: string, nickname: string, email: string }> = {}
     let mailer: EmailService

@@ -3,7 +3,7 @@
         "name": "아메리카노",
         "en_name": "Americano",
         "price": 2000,
-        "thumbnail": "",
+        "thumbnail": "https://www.google.com/",
         "detail": {
             "description": "고소한 맛이 나는 커피",
             "allergys": [],

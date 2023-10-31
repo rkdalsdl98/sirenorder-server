@@ -32,7 +32,7 @@ model wallet {
   uuid String @id
   point Int @default(0)
   stars Int @default(0)
-  user user @relation("UserWallet", references: [uuid], fields: [user_uid])
+  user user @relation("UserWallet", references: [uuid], fields: [user_uid], onDelete: Cascade)
   user_uid String @unique
 }
 
@@ -42,7 +42,7 @@ model gift {
   to String
   from String
   wrappingtype String @default("default")
-  user user @relation("Gift", references: [email], fields: [user_email])
+  user user @relation("Gift", references: [email], fields: [user_email], onDelete: Cascade)
   user_email String
 }
 
@@ -90,7 +90,7 @@ model store {
   location Json
   address String
   order linkedorder?
-  merchant merchant @relation("Store", references: [uuid], fields: [owner_uid])
+  merchant merchant @relation("Store", references: [uuid], fields: [owner_uid], onDelete: Cascade)
   owner_uid String @unique
   wallet storewallet? @relation("StoreWallet")
   detail storedetail? @relation("StoreDetail")
@@ -105,7 +105,7 @@ model storedetail {
   phonenumber String
   parkinginfo String
   waytocome String
-  store store @relation("StoreDetail", fields: [store_uid], references: [uuid])
+  store store @relation("StoreDetail", fields: [store_uid], references: [uuid], onDelete: Cascade)
   store_uid String @unique
 }
 
@@ -114,7 +114,7 @@ model storedetail {
 
 model storewallet {
   uuid String @id
-  store store @relation("StoreWallet", fields: [store_uid], references: [uuid])
+  store store @relation("StoreWallet", fields: [store_uid], references: [uuid], onDelete: Cascade)
   store_uid String @unique
   sales sales[] @relation("Sales")
 }
@@ -124,7 +124,7 @@ model sales {
   amounts Int @default(0)
   menuinfo Json
   salesdate String
-  currwallet storewallet @relation("Sales", references: [uuid], fields: [wallet_uid])
+  currwallet storewallet @relation("Sales", references: [uuid], fields: [wallet_uid], onDelete: Cascade)
   wallet_uid String @unique
 }
 
@@ -141,7 +141,7 @@ model menudetail {
   id Int @id @default(autoincrement())
   description String?
   allergys String[]
-  menu menu @relation("MenuDetail", fields: [menu_id], references: [id])
+  menu menu @relation("MenuDetail", fields: [menu_id], references: [id], onDelete: Cascade)
   menu_id Int @unique
   nutritions nutrition[] @relation("Nutrition")
 }
@@ -159,6 +159,6 @@ model nutrition {
   transfat Decimal @default(0.0)
   saturatedfat Decimal @default(0.0)
   caffeine Decimal @default(0.0)
-  currdetail menudetail @relation("Nutrition", references: [id], fields: [detail_id])
+  currdetail menudetail @relation("Nutrition", references: [id], fields: [detail_id], onDelete: Cascade)
   detail_id Int
 }

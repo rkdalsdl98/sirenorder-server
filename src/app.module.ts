@@ -4,12 +4,14 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RedisModule } from './modules/redis.module';
 import { UserModule } from './modules/user.module';
 import { AuthModule } from './modules/auth.module';
+import { MenuModule } from './modules/menu.module';
 
 @Module({
   imports: [
     RedisModule,
     UserModule,
     AuthModule,
+    MenuModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),
