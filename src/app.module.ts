@@ -5,6 +5,8 @@ import { RedisModule } from './modules/redis.module';
 import { UserModule } from './modules/user.module';
 import { AuthModule } from './modules/auth.module';
 import { MenuModule } from './modules/menu.module';
+import { StoreModule } from './modules/store.module';
+import { SocketModule } from './modules/socket.module';
 
 @Module({
   imports: [
@@ -12,6 +14,8 @@ import { MenuModule } from './modules/menu.module';
     UserModule,
     AuthModule,
     MenuModule,
+    StoreModule,
+    SocketModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),

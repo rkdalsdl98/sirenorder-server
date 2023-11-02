@@ -5,6 +5,8 @@ import { OrderHistory, UserEntity } from "./user.entity";
 import { MenuInfo } from "../../common/type/order.typs";
 import { ERROR } from "../../common/type/response.type";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { WalletEntity } from "./wallet.entity";
+import { GiftEntity } from "./gift.entity";
 
 @Injectable()
 export class UserRepository implements IRepository<UserEntity, undefined> {
@@ -30,7 +32,6 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
             include: {
                 wallet: true,
                 gifts: true,
-                order: true,
             }
         })
         .catch(err => {
@@ -49,7 +50,6 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
             include: {
                 wallet: true,
                 gifts: true,
-                order: true,
             }
         })
         .catch(err => {
@@ -82,7 +82,6 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
             include: {
                 wallet: true,
                 gifts: true,
-                order: true,
             }
         })
         .catch(err => {
@@ -117,7 +116,6 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
             include: {
                 wallet: true,
                 gifts: true,
-                order: true,
             }
         })
         .catch(err => {
@@ -153,10 +151,9 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
             nickname: e.nickname,
             pass: e.pass,
             salt: e.salt,
-            wallet: e.wallet,
-            gifts: e.gifts,
+            wallet: e.wallet as WalletEntity,
+            gifts: [...e.gifts.map(g => ({ ...g } as GiftEntity))],
             coupons: e.coupons,
-            order: e.order,
             orderhistory: Object.keys(e.orderhistory).map(key => {
                 return {
                     saleprice: e.orderhistory[key]["saleprice"],

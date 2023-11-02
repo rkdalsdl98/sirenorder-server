@@ -11,7 +11,6 @@ export interface UserEntity {
     readonly wallet: WalletEntity | null
     readonly gifts: GiftEntity[]
     readonly coupons: string[]
-    readonly order: OrderEntity | null
     readonly orderhistory: OrderHistory[]
     readonly accesstoken: string | null,
     readonly refreshtoken: string | null,
