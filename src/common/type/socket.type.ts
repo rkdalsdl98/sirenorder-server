@@ -28,7 +28,7 @@ export type RoomJoinOptions = {
     readonly gu: string
     readonly storename: string
     readonly thumbnail?: string
-    readonly location: LatLng
+    readonly location?: LatLng
     readonly address: string
     readonly detail: number | StoreDetailEntity
 }

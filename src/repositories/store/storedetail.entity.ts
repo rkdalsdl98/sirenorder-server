@@ -24,6 +24,6 @@ export type WeeklyHours = {
     sun: Hours
 }
 export type SirenOrderHours = {
-    sirenorder?: WeeklyHours,
+    sirenorder: WeeklyHours,
     dt?: WeeklyHours,
 }

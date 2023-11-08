@@ -16,8 +16,9 @@ import { AuthService } from "src/services/auth.service";
 import * as dotenv from "dotenv"
 import { MerchantRepository } from "src/repositories/store/merchant.repository";
 import { SocketEventHandler } from "./event.handler";
-import { StoreDto } from "src/dto/store.dto";
 import { RedisService } from "src/services/redis.service";
+import { MerchantEntity } from "src/repositories/store/merchant.entity";
+import { StoreWalletEntity } from "src/repositories/store/storewallet.entity";
 
 dotenv.config()
 const port : number = parseInt(process.env.SOCKET_PORT ?? "3001")
@@ -40,48 +41,35 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     async handleEvent(
         client: Socket, 
         @MessageBody() data: LoginRequest
-    ): Promise<SocketResponse<
-    unknown,
-    | typeof ERROR.ServerDatabaseError
-    >> {
-        let error
-        let body
+    ) {
+        let merchant : MerchantEntity
 
-        this.merchantRepository.getBy({ uuid: data.merchantId })
-        .then(merchant => {
-            if(merchant) {
-                const isVerify = this.auth.verifyPass({ pass: data.merchantId }, merchant.salt, merchant.pass)
-                if(isVerify) {
-                    error = ERROR.UnAuthorized
-                    error.substatus = "NotEqualPass"
-                } else {
-                    body = { ...merchant.store } as StoreDto
-                }
-            }
-        })
-        .catch(err => {
-            Logger.error("존재하지 않는 상인정보", err, SocketGateWay.name)
-            error = err
-        })
-        
-        if(error !== undefined) {
+        try {
+            merchant = await this.merchantRepository.getBy({ uuid: data.merchantId })
+            const loginResult = 
+            SocketEventHandler
+            .MessageHandler
+            .login(merchant as MerchantEntity, data.pass, this.auth)
+    
             await SocketEventHandler
             .Connection
-            .disconnect(client, { gu: data.gu, storename: body.storename }, this.redis)
+            .connect(client, { 
+                gu: data.gu, 
+                storename: merchant.store.storename,
+                thumbnail: merchant.store.thumbnail,
+                location: merchant.store.location,
+                address: merchant.store.address,
+                detail: merchant.store.detail,
+            }, this.redis)
             return {
-                result: false,
-                message: error.message,
-                data: error,
+                result: true,
+                message: "Done!",
+                data: loginResult,
             }
-        }
-
-        await SocketEventHandler
-        .Connection
-        .connect(client, { gu: data.gu, ...body }, this.redis )
-        return {
-            result: true,
-            message: "Done!",
-            data: body,
+        } catch(e) {
+            await SocketEventHandler
+            .Connection
+            .disconnect(client, e)
         }
     }
     

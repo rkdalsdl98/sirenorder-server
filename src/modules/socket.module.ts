@@ -5,6 +5,7 @@ import { SocketGateWay } from "../common/socket/socket.gateway";
 import { MerchantRepository } from "../repositories/store/merchant.repository";
 import { AuthService } from "../services/auth.service";
 import { PrismaService } from "../services/prisma.service";
+import { RedisService } from "src/services/redis.service";
 
 @Module({
     providers: [
@@ -12,6 +13,7 @@ import { PrismaService } from "../services/prisma.service";
         MerchantRepository,
         AuthService,
         PrismaService,
+        RedisService,
         JwtService,
         JwtFactory,
     ],
