@@ -17,6 +17,6 @@ async function bootstrap() {
   app.useGlobalInterceptors(new LoggingInterceptor())
   app.useWebSocketAdapter(new IoAdapter(app))
 
-  await app.listen(3000);
+  await app.listen(80);
 }
 bootstrap();

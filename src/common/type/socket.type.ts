@@ -17,8 +17,8 @@ export type SocketResponseBody<T> = {
     readonly message: string
     readonly data?: T
 }
-export type SocketResponse<T extends unknown, E extends FailedResponse> = 
-SocketResponseBody<T> | SocketResponseBody<E>
+export type SocketResponse<T, E extends FailedResponse> = 
+SocketResponseBody<T> | SocketResponseBody<E> | void
 
 export type RoomleaveOptions = {
     readonly gu: string

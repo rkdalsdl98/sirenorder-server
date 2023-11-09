@@ -3,7 +3,7 @@ import { tags } from "typia"
 
 export namespace MerchantQuery {
     export interface MerchantQueryRegist {
-        readonly body: MerchantDto
+        readonly data: MerchantDto
     }
     export interface MerchantQueryLogin {
         readonly uuid: string

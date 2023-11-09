@@ -3,7 +3,7 @@ import { IRepository } from "../../common/interface/irepository";
 import { PrismaService } from "../../services/prisma.service";
 import { LatLng, StoreEntity } from "./store.entity";
 import { ERROR } from "../../common/type/response.type";
-import { SirenOrderHours, StoreDetailEntity, WeeklyHours } from "./storedetail.entity";
+import { StoreDetailEntity, WeeklyHours } from "./storedetail.entity";
 
 @Injectable()
 export class StoreRepository implements IRepository<StoreEntity, StoreDetailEntity>  {
@@ -45,7 +45,7 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
             description: e.description,
             images: e.images,
             openhours: e.openhours as WeeklyHours,
-            sirenorderhours: e.sirenorderhours as SirenOrderHours,
+            sirenorderhours: e.sirenorderhours as WeeklyHours,
             phonenumber: e.phonenumber,
             parkinginfo: e.parkinginfo,
             waytocome: e.waytocome,

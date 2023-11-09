@@ -17,7 +17,6 @@ import * as dotenv from "dotenv"
 import { MerchantRepository } from "src/repositories/store/merchant.repository";
 import { SocketEventHandler } from "./event.handler";
 import { RedisService } from "src/services/redis.service";
-import { MerchantEntity } from "src/repositories/store/merchant.entity";
 import { StoreWalletEntity } from "src/repositories/store/storewallet.entity";
 
 dotenv.config()
@@ -36,20 +35,31 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     ){}
 
     @WebSocketServer() server: Server;
-
+    
+    /**
+     * 로그인 정보를 확인하고 일치한다면 상점 지갑정보를 리턴
+     * 
+     * 일치하지 않다면 요청한 클라이언트로 에러메세지 emit 후 연결종료
+     * @param client 
+     * @param data 
+     * @returns StoreWallet | void
+     */
     @SubscribeMessage('connect')
     async handleEvent(
         client: Socket, 
         @MessageBody() data: LoginRequest
-    ) {
-        let merchant : MerchantEntity
-
+    ) : Promise<SocketResponse<
+    StoreWalletEntity, 
+    | typeof ERROR.UnAuthorized
+    | typeof ERROR.ServerDatabaseError
+    | typeof ERROR.ServerCacheError
+    >> {
         try {
-            merchant = await this.merchantRepository.getBy({ uuid: data.merchantId })
+            const merchant = await this.merchantRepository.getBy({ uuid: data.merchantId })
             const loginResult = 
             SocketEventHandler
             .MessageHandler
-            .login(merchant as MerchantEntity, data.pass, this.auth)
+            .login(merchant, data.pass, this.auth)
     
             await SocketEventHandler
             .Connection

@@ -6,7 +6,7 @@ import { StoreEntity } from "./store.entity";
 import { ERROR } from "../../common/type/response.type";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { SalesEntity } from "./sales.entity";
-import { SirenOrderHours, StoreDetailEntity, WeeklyHours } from "./storedetail.entity";
+import { StoreDetailEntity, WeeklyHours } from "./storedetail.entity";
 import { MerchantDto } from "src/dto/merchant.dto";
 
 @Injectable()
@@ -14,6 +14,22 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
     constructor(
         private readonly prisma: PrismaService,
     ){}
+
+    async getMany(): Promise<MerchantEntity[]> {
+        return (await this.prisma.merchant.findMany({
+            include: { 
+                store: {
+                    include: { 
+                        detail: true, 
+                        wallet: {
+                            include: { sales: true }
+                        } 
+                    }
+                },
+            }
+        }))
+        .map(m => this.parsingEntity(m))
+    }
 
     async getBy(args: {
         uuid: string
@@ -28,7 +44,7 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
                         thumbnail: true,
                         location: true,
                         storename: true,
-                        wallet: true,
+                        wallet: { include: { sales: true }},
                     }
                 }
             }
@@ -64,22 +80,22 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
                             create: {
                                 images: args.createData.storeinfo.detail.images,
                                 openhours: {
-                                    mon: args.createData.storeinfo.detail.hours.openhours,
-                                    tue: args.createData.storeinfo.detail.hours.openhours,
-                                    thur: args.createData.storeinfo.detail.hours.openhours,
-                                    wed: args.createData.storeinfo.detail.hours.openhours,
-                                    fri: args.createData.storeinfo.detail.hours.openhours,
-                                    sat: args.createData.storeinfo.detail.hours.openhours,
-                                    sun: args.createData.storeinfo.detail.hours.openhours,
+                                    mon: args.createData.storeinfo.detail.openhours,
+                                    tue: args.createData.storeinfo.detail.openhours,
+                                    thur: args.createData.storeinfo.detail.openhours,
+                                    wed: args.createData.storeinfo.detail.openhours,
+                                    fri: args.createData.storeinfo.detail.openhours,
+                                    sat: args.createData.storeinfo.detail.openhours,
+                                    sun: args.createData.storeinfo.detail.openhours,
                                 } as WeeklyHours,
                                 sirenorderhours: {
-                                    mon: args.createData.storeinfo.detail.hours.sirenorderhours.sirenorder,
-                                    tue: args.createData.storeinfo.detail.hours.sirenorderhours.sirenorder,
-                                    thur: args.createData.storeinfo.detail.hours.sirenorderhours.sirenorder,
-                                    wed: args.createData.storeinfo.detail.hours.sirenorderhours.sirenorder,
-                                    fri: args.createData.storeinfo.detail.hours.sirenorderhours.sirenorder,
-                                    sat: args.createData.storeinfo.detail.hours.sirenorderhours.sirenorder,
-                                    sun: args.createData.storeinfo.detail.hours.sirenorderhours.sirenorder,
+                                    mon: args.createData.storeinfo.detail.sirenorderhours,
+                                    tue: args.createData.storeinfo.detail.sirenorderhours,
+                                    thur: args.createData.storeinfo.detail.sirenorderhours,
+                                    wed: args.createData.storeinfo.detail.sirenorderhours,
+                                    fri: args.createData.storeinfo.detail.sirenorderhours,
+                                    sat: args.createData.storeinfo.detail.sirenorderhours,
+                                    sun: args.createData.storeinfo.detail.sirenorderhours,
                                 } as WeeklyHours,
                                 description: args.createData.storeinfo.detail.description ?? "없음",
                                 parkinginfo: args.createData.storeinfo.detail.parkinginfo ?? "없음",
@@ -139,7 +155,7 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
         updateDate: Partial<Omit<SalesEntity, "id">>,
         args: {
         salesId: number
-        uuid?: string,
+        walletUUID: string,
     }) :
     Promise<SalesEntity> {
         return this.parsingSalesEntity(await this.prisma.sales.upsert({
@@ -154,7 +170,7 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
                 menuinfo: updateDate.menuinfo,
                 salesdate: updateDate.salesdate!,
                 currwallet: {
-                    connect: { uuid: args.uuid }
+                    connect: { uuid: args.walletUUID }
                 }
             }
         }).catch(err => {
@@ -222,7 +238,7 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
             description: e.description,
             images: e.images,
             openhours: e.openhours as WeeklyHours,
-            sirenorderhours: e.sirenorderhours as SirenOrderHours,
+            sirenorderhours: e.sirenorderhours as WeeklyHours,
             phonenumber: e.phonenumber,
             parkinginfo: e.parkinginfo,
             waytocome: e.waytocome,

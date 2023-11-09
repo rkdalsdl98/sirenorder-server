@@ -15,13 +15,9 @@ export type Hours = {
     readonly close: string
 }
 
-export type SirenOrderHours = {
-    readonly sirenorder: Hours
-    readonly dt: Hours
-}
-
 export type StoreDetailInfoDto = {
-    readonly hours: { openhours: Hours, sirenorderhours: SirenOrderHours }
+    readonly openhours: Hours
+    readonly sirenorderhours: Hours
     readonly phonenumber: string
     readonly parkinginfo?: string
     readonly waytocome?: string

@@ -10,6 +10,10 @@ export class MerchantService {
         private readonly auth: AuthService,
     ){}
 
+    async getTest() {
+        return this.merchantRepository.getMany()
+    }
+
     async registMerchant(createData: MerchantDto)
     : Promise<{ merchant: string, store: string, wallet: string }> {
         const { hash, salt } = await this.auth.encryption({ pass: createData.pass })

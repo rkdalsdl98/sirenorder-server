@@ -1,11 +1,9 @@
-import { tags } from "typia"
-
 export interface StoreDetailEntity {
     readonly description?: string
     readonly images: string[]
     readonly openhours: WeeklyHours
-    readonly sirenorderhours: SirenOrderHours
-    readonly phonenumber: string & tags.Pattern<"[0-9]{3}-[0-9]{4}-[0-9]{4}$">
+    readonly sirenorderhours: WeeklyHours
+    readonly phonenumber: string
     readonly parkinginfo: string
     readonly waytocome: string
 }
@@ -22,8 +20,4 @@ export type WeeklyHours = {
     fri: Hours,
     sat: Hours,
     sun: Hours
-}
-export type SirenOrderHours = {
-    sirenorder: WeeklyHours,
-    dt?: WeeklyHours,
 }
