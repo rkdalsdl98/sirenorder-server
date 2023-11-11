@@ -14,6 +14,10 @@ export class MerchantService {
         return this.merchantRepository.getMany()
     }
 
+    async deleteMerchant(uuid: string) {
+        return await this.merchantRepository.deleteBy({ uuid })
+    }
+
     async registMerchant(createData: MerchantDto)
     : Promise<{ merchant: string, store: string, wallet: string }> {
         const { hash, salt } = await this.auth.encryption({ pass: createData.pass })

@@ -9,7 +9,6 @@ export type LoginRequest = {
     string 
     & tags.Pattern<"[0-9a-zA-Z]{6,20}">
     & tags.Pattern<"[\!\`\~\@\#\$\%\^\&\*\_\+\=\/\>\<\?]{1,}">
-    readonly gu: string
 }
 
 export type SocketResponseBody<T> = {
@@ -25,7 +24,7 @@ export type RoomleaveOptions = {
     readonly storename: string
 }
 export type RoomJoinOptions = {
-    readonly gu: string
+    readonly socketId: string
     readonly storename: string
     readonly thumbnail?: string
     readonly location?: LatLng

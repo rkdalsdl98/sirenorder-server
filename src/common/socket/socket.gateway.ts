@@ -1,5 +1,6 @@
 import { Logger } from "@nestjs/common";
 import { 
+    ConnectedSocket,
     MessageBody, 
     OnGatewayConnection, 
     OnGatewayDisconnect, 
@@ -23,7 +24,7 @@ dotenv.config()
 const port : number = parseInt(process.env.SOCKET_PORT ?? "3001")
 
 @WebSocketGateway(port, {
-    namespace: "MerchantGateWay",
+    namespace: "merchantgateWay",
     cors: "*",
 })
 export class SocketGateWay 
@@ -35,18 +36,17 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     ){}
 
     @WebSocketServer() server: Server;
-    
+
     /**
      * 로그인 정보를 확인하고 일치한다면 상점 지갑정보를 리턴
      * 
      * 일치하지 않다면 요청한 클라이언트로 에러메세지 emit 후 연결종료
-     * @param client 
      * @param data 
      * @returns StoreWallet | void
      */
-    @SubscribeMessage('connect')
-    async handleEvent(
-        client: Socket, 
+    @SubscribeMessage('login')
+    async handleConnectEvent(
+        @ConnectedSocket() client: Socket, 
         @MessageBody() data: LoginRequest
     ) : Promise<SocketResponse<
     StoreWalletEntity, 
@@ -63,8 +63,8 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     
             await SocketEventHandler
             .Connection
-            .connect(client, { 
-                gu: data.gu, 
+            .connect({
+                socketId: client.id,
                 storename: merchant.store.storename,
                 thumbnail: merchant.store.thumbnail,
                 location: merchant.store.location,
@@ -73,18 +73,18 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
             }, this.redis)
             return {
                 result: true,
-                message: "Done!",
+                message: "connect",
                 data: loginResult,
             }
         } catch(e) {
             await SocketEventHandler
             .Connection
-            .disconnect(client, e)
+            .disconnect(client, e, this.redis)
         }
     }
     
     afterInit(_) {
-        Logger.log("상점 게이트웨이 초기화 ✅", SocketGateWay.name)
+        Logger.log(`상점 소켓 게이트웨이 초기화 ✅ : 대기 포트 => ${port}`, SocketGateWay.name)
     }
 
     handleDisconnect(client: Socket) {

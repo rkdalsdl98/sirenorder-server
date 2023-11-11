@@ -1,5 +1,5 @@
-import { TypedBody, TypedRoute } from "@nestia/core";
-import { Controller } from "@nestjs/common";
+import { TypedBody, TypedQuery, TypedRoute } from "@nestia/core";
+import { Body, Controller } from "@nestjs/common";
 import { ERROR, TryCatch } from "src/common/type/response.type";
 import { MerchantQuery } from "src/query/merchant.query";
 import { MerchantService } from "src/services/merchant.service";
@@ -21,7 +21,7 @@ export class MerchantController {
 
     @TypedRoute.Post("regist")
     async registMerchant(
-        @TypedBody() body: MerchantQuery.MerchantQueryRegist
+        @Body() body: MerchantQuery.MerchantQueryRegist
     ) :
     Promise<TryCatch<
     { uuids: { merchant: string, store: string, wallet: string } },
@@ -32,6 +32,23 @@ export class MerchantController {
             return {
                 data: { uuids: result },
                 status: 201,
+            }
+        } catch(e) { return e }
+    }
+
+    @TypedRoute.Delete()
+    async deleteMerchant(
+        @TypedQuery() query: { uuid: string }
+    ):
+    Promise<TryCatch<
+    boolean,
+    | typeof ERROR.ServerDatabaseError
+    >> {
+        try {
+            const result = await this.merchantService.deleteMerchant(query.uuid)
+            return {
+                data: result,
+                status: 200,
             }
         } catch(e) { return e }
     }

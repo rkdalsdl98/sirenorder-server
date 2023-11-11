@@ -69,7 +69,7 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
                 store: {
                     create: {
                         uuid: args.uuids.store,
-                        address: args.createData.storeinfo.storeaddress,
+                        address: args.createData.storeinfo.address,
                         location: {
                             latitude: 0,
                             longitude: 0,
@@ -211,6 +211,14 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
             }
             Logger.error("데이터를 갱신하는데 실패했습니다.", err.toString(), MerchantRepository.name)
             throw ERROR.ServerDatabaseError
+        }))
+    }
+
+    async deleteBy(args: {
+        uuid: string
+    }): Promise<boolean> {
+        return !!(await this.prisma.merchant.delete({
+            where: { uuid: args.uuid }
         }))
     }
 

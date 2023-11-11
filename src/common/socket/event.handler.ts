@@ -3,27 +3,24 @@ import { RoomJoinOptions, RoomleaveOptions } from "../type/socket.type";
 import { RedisService } from "src/services/redis.service";
 import { AuthService } from "src/services/auth.service";
 import { MerchantEntity } from "src/repositories/store/merchant.entity";
-import { ERROR, TryCatch } from "../type/response.type";
+import { ERROR } from "../type/response.type";
 import { StoreWalletEntity } from "src/repositories/store/storewallet.entity";
 
 const logPath = "SocketEventHandler"
 
 export namespace SocketEventHandler {
     export namespace Connection {
-        export const connect = async (
-            client: Socket, 
+        export const connect = async ( 
             options: RoomJoinOptions, 
             redis: RedisService
         ) => {
-            if(client.rooms.has(options.gu)) return
-            const caches = await redis.get<RoomJoinOptions[]>(options.gu, logPath)
-            await redis.set(options.gu,
+            const caches = await redis.get<RoomJoinOptions[]>("stores", logPath)
+            await redis.set("stores",
                 caches 
                 ? [...caches, options] 
                 : [options],
                 logPath
             )
-            client.join(options.gu)
         }
         export const disconnect = async (
             client: Socket, 
@@ -31,31 +28,36 @@ export namespace SocketEventHandler {
             redis?: RedisService,
             options?: RoomleaveOptions, 
         ) => {
-            if(options && redis) {
-                await leaveroom(client, options, redis)
-                client.emit("error", error)
+            // if(options && redis) {
+            //     await leaveroom(client, options, redis)
+            // }
+            if(redis) {
+                let caches = await redis.get<RoomJoinOptions[]>("stores", logPath)
+                caches = caches?.filter(c => c.socketId !== client.id) ?? []
+                await redis.set("stores", caches, logPath)
             }
+            client.emit("error", error)
             client.disconnect()
         }
-        export const leaveroom = async (
-            client: Socket, 
-            options: RoomleaveOptions,
-            redis: RedisService,
-        ) => {
-            if(!client.rooms.has(options.gu)) return
-            const caches = await redis.get<{ storename: string }[]>(options.gu, logPath)
-            let after : { storename: string }[] = []
+        // export const leaveroom = async (
+        //     client: Socket, 
+        //     options: RoomleaveOptions,
+        //     redis: RedisService,
+        // ) => {
+        //     if(!client.rooms.has(options.gu)) return
+        //     const caches = await redis.get<{ storename: string }[]>(options.gu, logPath)
+        //     let after : { storename: string }[] = []
 
-            if(caches) caches.forEach(c => {
-                if(c.storename !== options.storename) after.push(c)
-            })
+        //     if(caches) caches.forEach(c => {
+        //         if(c.storename !== options.storename) after.push(c)
+        //     })
             
-            await redis.set(options.gu,
-                after,
-                logPath
-            )
-            client.leave(options.gu)
-        }
+        //     await redis.set(options.gu,
+        //         after,
+        //         logPath
+        //     )
+        //     client.leave(options.gu)
+        // }
     }
 
     export namespace MessageHandler {
