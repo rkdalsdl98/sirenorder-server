@@ -158,8 +158,8 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
                 return {
                     saleprice: e.orderhistory[key]["saleprice"],
                     totalprice: e.orderhistory[key]["totalprice"],
-                    menuinfo: e.orderhistory[key]["menuinfo"] as MenuInfo,
-                    merchant_uid: e.orderhistory[key]["merchant_uid"]
+                    menus: e.orderhistory[key]["menus"].map(m => m as MenuInfo),
+                    store_uid: e.orderhistory[key]["store_uid"]
                 } as OrderHistory
             }),
             accesstoken: e.accesstoken,

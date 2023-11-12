@@ -22,4 +22,9 @@ export interface UserEntity {
 type NestiedType<T> = {
     [key in keyof T]: T[key]
 }
-export type OrderHistory = NestiedType<Omit<OrderEntity, "uuid"> & { store_uid: string }>
+export type OrderHistory = 
+NestiedType<Omit<OrderEntity, 
+| "uuid" 
+| "merchant_uid"
+| "deliveryinfo"
+> & { store_uid: string }>

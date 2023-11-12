@@ -31,11 +31,6 @@ export namespace SocketEventHandler {
             // if(options && redis) {
             //     await leaveroom(client, options, redis)
             // }
-            if(redis) {
-                let caches = await redis.get<RoomJoinOptions[]>("stores", logPath)
-                caches = caches?.filter(c => c.socketId !== client.id) ?? []
-                await redis.set("stores", caches, logPath)
-            }
             client.emit("error", error)
             client.disconnect()
         }
@@ -65,10 +60,13 @@ export namespace SocketEventHandler {
             findMerchant: MerchantEntity,
             pass: string, 
             auth: AuthService
-        ) : StoreWalletEntity => {
+        ) : Omit<StoreWalletEntity, "uuid"> => {
             const isVerfify = auth.verifyPass({ pass }, findMerchant.salt, findMerchant.pass)
             if(isVerfify) {
-                return findMerchant.store.wallet!
+                return {
+                    sales: findMerchant.store.wallet!.sales,
+                    store_uid: findMerchant.store.wallet!.store_uid,
+                }
             }
             var error = ERROR.UnAuthorized
             error.substatus = "NotEqualPass"

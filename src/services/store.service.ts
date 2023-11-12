@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { StoreDetailDto, StoreDto } from "../dto/store.dto";
+import { OrderDto, StoreDetailDto, StoreDto } from "../dto/store.dto";
 import { StoreRepository } from "../repositories/store/store.repository";
 import { RedisService } from "./redis.service";
 import { StoreEntity } from "src/repositories/store/store.entity";
@@ -28,6 +28,16 @@ export class StoreService {
     Promise<StoreDetailDto> {
         return (await this.storeRepository.getBy(id)
         .then(s => ({ ...s } as StoreDetailDto))
+        .catch(err => {
+            Logger.error("상점 상세정보 조회 실패", err) 
+            throw err
+        }))
+    }
+
+    async getOrders(storeId: string) :
+    Promise<OrderDto[]> {
+        return (await this.storeRepository.getOrders(storeId)
+        .then(o => o.map(od => ({ ...od } as OrderDto)))
         .catch(err => {
             Logger.error("상점 상세정보 조회 실패", err) 
             throw err

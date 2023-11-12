@@ -55,8 +55,9 @@ model order {
   uuid String @id
   saleprice Int @default(0)
   totalprice Int @default(0)
-  merchant_uid String @unique
-  menuinfo Json
+  deliveryinfo Json
+  store_uid String @unique
+  menus Json[]
 }
 
 model merchant {
@@ -104,7 +105,7 @@ model storewallet {
 model sales {
   id Int @id @default(autoincrement())
   amounts Int @default(0)
-  menuinfo Json
+  menus Json[]
   salesdate String
   currwallet storewallet @relation("Sales", references: [uuid], fields: [wallet_uid], onDelete: Cascade)
   wallet_uid String @unique

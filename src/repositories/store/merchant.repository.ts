@@ -162,12 +162,12 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
             where: { id: args.salesId },
             update: {
                 amounts: updateDate.amounts,
-                menuinfo: updateDate.menuinfo,
+                menus: updateDate.menus,
                 salesdate: updateDate.salesdate,
             },
             create: {
                 amounts: updateDate.amounts,
-                menuinfo: updateDate.menuinfo,
+                menus: updateDate.menus,
                 salesdate: updateDate.salesdate!,
                 currwallet: {
                     connect: { uuid: args.walletUUID }
@@ -235,7 +235,7 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
         if(!e) throw ERROR.NotFoundData
         return {
             amounts: e.amounts,
-            menuinfo: e.menuinfo,
+            menus: e.menus,
             salesdate: e.salesdate,
         } as SalesEntity
     }

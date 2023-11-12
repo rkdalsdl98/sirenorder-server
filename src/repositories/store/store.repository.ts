@@ -4,6 +4,8 @@ import { PrismaService } from "../../services/prisma.service";
 import { LatLng, StoreEntity } from "./store.entity";
 import { ERROR } from "../../common/type/response.type";
 import { StoreDetailEntity, WeeklyHours } from "./storedetail.entity";
+import { OrderEntity } from "../user/order.entity";
+import { MenuInfo } from "src/common/type/order.typs";
 
 @Injectable()
 export class StoreRepository implements IRepository<StoreEntity, StoreDetailEntity>  {
@@ -18,6 +20,15 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
             Logger.error("데이터를 불러오는데 실패했습니다.", err.toString(), StoreRepository)
             throw ERROR.ServerDatabaseError
         }))
+    }
+
+    async getOrders(storeId: string): Promise<OrderEntity[]> {
+        return (await this.prisma.order.findMany({
+            where: { store_uid: storeId }
+        }).catch(err => {
+            Logger.error("데이터를 불러오는데 실패했습니다.", err.toString(), StoreRepository)
+            throw ERROR.ServerDatabaseError
+        })).map(o => this.parsingOrderEntity(o))
     }
 
     async getMany(): Promise<StoreEntity[]> {
@@ -50,5 +61,16 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
             parkinginfo: e.parkinginfo,
             waytocome: e.waytocome,
         } as StoreDetailEntity
+    }
+
+    parsingOrderEntity(e) : OrderEntity {
+        if(!e) throw ERROR.NotFoundData
+        return {
+            totalprice: e.totalprice,
+            saleprice: e.saleprice,
+            store_uid: e.store_uid,
+            deliveryinfo: e.deliveryinfo,
+            menus: e.menus.map(m => m as MenuInfo),
+        } as OrderEntity
     }
 }
