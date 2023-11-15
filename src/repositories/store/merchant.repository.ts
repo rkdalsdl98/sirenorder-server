@@ -39,6 +39,7 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
             include: {
                 store: {
                     select: {
+                        uuid: true,
                         detail: { select: { id: true }},
                         address: true,
                         thumbnail: true,

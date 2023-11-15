@@ -8,4 +8,3 @@ export type StoreDetailDto = Omit<StoreDto,
 | "location"
 | "address"
 | "wallet">
-export type OrderDto = Omit<OrderEntity, "store_uid">

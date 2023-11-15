@@ -17,17 +17,18 @@ export type SocketResponseBody<T> = {
     readonly data?: T
 }
 export type SocketResponse<T, E extends FailedResponse> = 
-SocketResponseBody<T> | SocketResponseBody<E> | void
+SocketResponseBody<T> | SocketResponseBody<E> | any
 
 export type RoomleaveOptions = {
-    readonly gu: string
-    readonly storename: string
+    readonly storeId: string
 }
 export type RoomJoinOptions = {
-    readonly socketId: string
+    socketId?: string
+    readonly storeId: string
     readonly storename: string
     readonly thumbnail?: string
     readonly location?: LatLng
     readonly address: string
     readonly detail: number | StoreDetailEntity
+    readonly isOpen: boolean
 }

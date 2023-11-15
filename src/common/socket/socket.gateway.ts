@@ -10,8 +10,8 @@ import {
     WebSocketServer, 
 } from "@nestjs/websockets"
 import { Server, Socket } from "socket.io";
-import { LoginRequest, SocketResponse } from "../type/socket.type";
-import { ERROR } from "../type/response.type";
+import { LoginRequest, SocketResponse, SocketResponseBody } from "../type/socket.type";
+import { ERROR, FailedResponse } from "../type/response.type";
 import { AuthService } from "src/services/auth.service";
 
 import * as dotenv from "dotenv"
@@ -19,6 +19,7 @@ import { MerchantRepository } from "src/repositories/store/merchant.repository";
 import { SocketEventHandler } from "./event.handler";
 import { RedisService } from "src/services/redis.service";
 import { StoreWalletEntity } from "src/repositories/store/storewallet.entity";
+import { OrderEntity } from "src/repositories/user/order.entity";
 
 dotenv.config()
 const port : number = parseInt(process.env.SOCKET_PORT ?? "3001")
@@ -35,7 +36,13 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
         private readonly redis: RedisService,
     ){}
 
-    @WebSocketServer() server: Server;
+    @WebSocketServer() private readonly server: Server;
+
+    @SubscribeMessage('ping')
+    async pingPong(
+    ) {
+        return { message: 'pong' }
+    }
 
     /**
      * 로그인 정보를 확인하고 일치한다면 상점 지갑정보를 리턴
@@ -54,23 +61,19 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     | typeof ERROR.ServerDatabaseError
     | typeof ERROR.ServerCacheError
     >> {
+        let storeId: string = ""
         try {
             const merchant = await this.merchantRepository.getBy({ uuid: data.merchantId })
+            storeId = merchant.store.uuid
+
             const loginResult = 
             SocketEventHandler
             .MessageHandler
             .login(merchant, data.pass, this.auth)
-    
+
             await SocketEventHandler
             .Connection
-            .connect({
-                socketId: client.id,
-                storename: merchant.store.storename,
-                thumbnail: merchant.store.thumbnail,
-                location: merchant.store.location,
-                address: merchant.store.address,
-                detail: merchant.store.detail,
-            }, this.redis)
+            .connect(storeId, client.id, this.redis)
             return {
                 result: true,
                 message: "connect",
@@ -79,8 +82,23 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
         } catch(e) {
             await SocketEventHandler
             .Connection
-            .disconnect(client, e, this.redis)
+            .disconnect({
+                client,
+                redis: this.redis,
+                error: e,
+            })
         }
+    }
+
+    sendOrder(socketId: string, order: OrderEntity & { orderId: string })
+    : boolean {
+        return this.server
+        .timeout(1000)
+        .to(socketId)
+        .emit(
+            "order", 
+            { result: true, message: "done", data: order }
+        )
     }
     
     afterInit(_) {
@@ -88,7 +106,15 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     }
 
     handleDisconnect(client: Socket) {
-        Logger.log(`정상적인 연결종료 ✅ : ${client.id}`, SocketGateWay.name)
+        SocketEventHandler
+        .Connection
+        .disconnect({ client, redis: this.redis})
+        .then(_=> {
+            Logger.log(`정상적인 연결종료 ✅ : ${client.id}`, SocketGateWay.name)
+        })
+        .catch(err => {
+            Logger.error("연결해제중 오류발생", err)
+        })
     }
 
     handleConnection(client: Socket, ...args: any[]) {

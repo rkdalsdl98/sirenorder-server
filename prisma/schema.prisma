@@ -56,7 +56,7 @@ model order {
   saleprice Int @default(0)
   totalprice Int @default(0)
   deliveryinfo Json
-  store_uid String @unique
+  store_uid String
   menus Json[]
 }
 

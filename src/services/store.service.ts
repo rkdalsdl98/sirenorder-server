@@ -1,27 +1,53 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { OrderDto, StoreDetailDto, StoreDto } from "../dto/store.dto";
+import { StoreDetailDto, StoreDto } from "../dto/store.dto";
 import { StoreRepository } from "../repositories/store/store.repository";
 import { RedisService } from "./redis.service";
 import { StoreEntity } from "src/repositories/store/store.entity";
+import { RoomJoinOptions } from "src/common/type/socket.type";
+import { SocketGateWay } from "src/common/socket/socket.gateway";
+import { OrderEntity } from "src/repositories/user/order.entity";
+import { AuthService } from "./auth.service";
 
 @Injectable()
 export class StoreService {
     constructor(
         private readonly storeRepository: StoreRepository,
         private readonly redis: RedisService,
+        private readonly socket: SocketGateWay,
+        private readonly auth: AuthService,
     ){
         this._initialized()
     }
 
     private async _initialized() :
     Promise<void> {
-        const stores = await this.storeRepository.getMany()
+        //await this.storeRepository.deleteOrders()
+        const stores = (await this.storeRepository.getMany())
+        .map(s => ({ ...s, storeId: s.uuid, isOpen: false } as RoomJoinOptions))
         await this.redis.set("stores", stores, StoreService.name)
         .then(_=> Logger.log("상점정보 인 메모리 캐싱"))
         .catch(err => {
             Logger.error("상점정보 인 메모리 캐싱실패")
             throw err
         })
+    }
+
+    async sendOrder(order: OrderEntity)
+    : Promise<boolean> {
+        const store = (await this.redis.get<RoomJoinOptions[]>("stores", StoreService.name))
+        ?.find(s => s.storeId === order.store_uid)
+        if(store && store.isOpen && store.socketId) {
+            const orderId = this.auth.getRandUUID()
+            const create = await this.storeRepository.createOrder(order, orderId)
+            .catch(err => {
+                Logger.error("주문 생성 실패", err) 
+                throw err
+            })
+
+            return this.socket.sendOrder(store.socketId, { ...create, orderId })
+        }
+
+        return false
     }
 
     async getStoreDetailBy(id: number) : 
@@ -35,9 +61,8 @@ export class StoreService {
     }
 
     async getOrders(storeId: string) :
-    Promise<OrderDto[]> {
+    Promise<OrderEntity[]> {
         return (await this.storeRepository.getOrders(storeId)
-        .then(o => o.map(od => ({ ...od } as OrderDto)))
         .catch(err => {
             Logger.error("상점 상세정보 조회 실패", err) 
             throw err

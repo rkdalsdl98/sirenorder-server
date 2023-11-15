@@ -11,8 +11,10 @@ import { JwtFactory } from "../common/jwt/jwtfactory";
 import { AuthService } from "../services/auth.service";
 import { ConfigService } from "@nestjs/config";
 import { MerchantController } from "src/controllers/merchant.controller";
+import { SocketModule } from "./socket.module";
 
 @Module({
+    imports: [SocketModule],
     controllers: [
         StoreController,
         MerchantController,

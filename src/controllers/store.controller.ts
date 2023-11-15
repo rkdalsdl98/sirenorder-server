@@ -1,9 +1,10 @@
-import { TypedParam, TypedQuery, TypedRoute } from "@nestia/core";
+import { TypedBody, TypedParam, TypedQuery, TypedRoute } from "@nestia/core";
 import { Controller } from "@nestjs/common";
 import { ERROR, TryCatch } from "../common/type/response.type";
-import { OrderDto, StoreDetailDto, StoreDto } from "../dto/store.dto";
+import { StoreDetailDto, StoreDto } from "../dto/store.dto";
 import { StoreService } from "../services/store.service";
-import { StoreQuery } from "src/query/store.query";
+import { StoreBody, StoreQuery } from "src/query/store.query";
+import { OrderEntity } from "src/repositories/user/order.entity";
 
 @Controller('store')
 export class StoreController {
@@ -41,11 +42,11 @@ export class StoreController {
         } catch(e) { return e }
     }
 
-    @TypedRoute.Get("orders")
+    @TypedRoute.Get("order")
     async getOrders(
         @TypedQuery() query : StoreQuery.StoreQueryGetOrdersOptions
     ) : Promise<TryCatch<
-    OrderDto[],
+    OrderEntity[],
     | typeof ERROR.ServerDatabaseError
     | typeof ERROR.ServiceUnavailableException
     >> {
@@ -56,5 +57,22 @@ export class StoreController {
                 status: 200,
             }
         } catch (e) { return e }
+    }
+
+    @TypedRoute.Post("order/send")
+    async sendOrder(
+        @TypedBody() body : StoreBody.StoreBodyCreateOrderOptions
+    ) : Promise<TryCatch<
+    boolean,
+    | typeof ERROR.ServerDatabaseError
+    | typeof ERROR.ServiceUnavailableException
+    >> {
+        try {
+            const result = await this.storeService.sendOrder(body)
+            return {
+                data: result,
+                status: 201,
+            }
+        } catch(e) { return e }
     }
 }

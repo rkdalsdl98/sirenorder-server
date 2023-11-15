@@ -17,5 +17,6 @@ import { RedisService } from "src/services/redis.service";
         JwtService,
         JwtFactory,
     ],
+    exports: [SocketGateWay]
 })
 export class SocketModule {}

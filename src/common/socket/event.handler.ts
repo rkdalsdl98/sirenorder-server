@@ -1,9 +1,9 @@
 import { Socket } from "socket.io";
-import { RoomJoinOptions, RoomleaveOptions } from "../type/socket.type";
+import { RoomJoinOptions, SocketResponseBody } from "../type/socket.type";
 import { RedisService } from "src/services/redis.service";
 import { AuthService } from "src/services/auth.service";
 import { MerchantEntity } from "src/repositories/store/merchant.entity";
-import { ERROR } from "../type/response.type";
+import { ERROR, FailedResponse } from "../type/response.type";
 import { StoreWalletEntity } from "src/repositories/store/storewallet.entity";
 
 const logPath = "SocketEventHandler"
@@ -11,28 +11,56 @@ const logPath = "SocketEventHandler"
 export namespace SocketEventHandler {
     export namespace Connection {
         export const connect = async ( 
-            options: RoomJoinOptions, 
+            storeId: string,
+            socketId: string, 
             redis: RedisService
         ) => {
             const caches = await redis.get<RoomJoinOptions[]>("stores", logPath)
-            await redis.set("stores",
-                caches 
-                ? [...caches, options] 
-                : [options],
-                logPath
-            )
+            const store = caches!.find(s => s.storeId === storeId)
+            if(!store) {
+                throw ERROR.NotFoundData
+            } else {
+                const after = caches?.map(c => {
+                    if(c.storeId === storeId) return { ...store, isOpen: true, socketId }
+                    return c
+                })
+                await redis.set("stores", 
+                    after ?? [{ ...store, isOpen: true, socketId }],
+                    logPath
+                )
+            }
         }
-        export const disconnect = async (
-            client: Socket, 
-            error: any,
+        export const disconnect = async (options: {
+            client: Socket,
+            error?: any,
             redis?: RedisService,
-            options?: RoomleaveOptions, 
-        ) => {
-            // if(options && redis) {
-            //     await leaveroom(client, options, redis)
-            // }
-            client.emit("error", error)
-            client.disconnect()
+        }) => {
+            if(options.redis) {
+                const caches = (await options.redis.get<RoomJoinOptions[]>("stores", logPath))
+                ?.map(c => {
+                    if(c.socketId === options.client.id) {
+                        return {
+                            ...c,
+                            isOpen: false,
+                            socketId: undefined,
+                        }
+                    }
+                    return c
+                })
+                await options.redis.set("stores", 
+                    caches === undefined ? [] : caches,
+                    logPath
+                )
+            }
+            
+            if(options.error) {
+                options.client.emit("error", {
+                    result: false,
+                    message: "failed",
+                    data: options.error,
+                } as SocketResponseBody<FailedResponse>)
+            }
+            options.client.disconnect()
         }
         // export const leaveroom = async (
         //     client: Socket, 

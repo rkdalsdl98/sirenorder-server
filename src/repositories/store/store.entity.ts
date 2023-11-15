@@ -2,6 +2,7 @@ import { StoreDetailEntity } from "./storedetail.entity"
 import { StoreWalletEntity } from "./storewallet.entity"
 
 export interface StoreEntity {
+    readonly uuid: string
     readonly storename: string
     readonly thumbnail?: string
     readonly location?: LatLng

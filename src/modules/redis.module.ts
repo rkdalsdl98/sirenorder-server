@@ -11,7 +11,6 @@ dotenv.config()
             store: redisStore,
             host: process.env.SERVER_IP_DEV,
             port: process.env.REDIS_PORT,
-            ttl: 60,
             isGlobal: true,
         })
     ],

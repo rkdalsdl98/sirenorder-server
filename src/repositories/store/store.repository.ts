@@ -40,8 +40,39 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
         })).map(e => this.parsingEntity(e))
     }
 
+    async createOrder(order: OrderEntity, orderId: string)
+    : Promise<OrderEntity> {
+        return this.parsingOrderEntity(await this.prisma.order.create({
+            data: {
+                store_uid: order.store_uid,
+                uuid: orderId,
+                deliveryinfo: order.deliveryinfo,
+                menus: order.menus,
+                saleprice: order.saleprice,
+                totalprice: order.totalprice,
+            }
+        }).catch(err => {
+            Logger.error("데이터를 갱신하는데 실패했습니다.", err.toString(), StoreRepository)
+            throw ERROR.ServerDatabaseError
+        }))
+    }
+
+    async deleteOrder(orderId: string): Promise<OrderEntity> {
+        return this.parsingOrderEntity(await this.prisma.order.delete({
+            where: { uuid: orderId }
+        }).catch(err => {
+            Logger.error("데이터를 삭제하는데 실패했습니다.", err.toString(), StoreRepository)
+            throw ERROR.ServerDatabaseError
+        }))
+    }
+
+    async deleteOrders() : Promise<void> {
+        await this.prisma.order.deleteMany()
+    }
+
     parsingEntity(e) : StoreEntity {
         return {
+            uuid: e.uuid,
             storename: e.storename,
             thumbnail: e.thumbnail,
             location: e.location as LatLng,
