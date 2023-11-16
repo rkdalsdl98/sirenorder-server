@@ -7,6 +7,7 @@ import { RoomJoinOptions } from "src/common/type/socket.type";
 import { SocketGateWay } from "src/common/socket/socket.gateway";
 import { OrderEntity } from "src/repositories/user/order.entity";
 import { AuthService } from "./auth.service";
+import { OrderDto } from "src/dto/user.dto";
 
 @Injectable()
 export class StoreService {
@@ -21,7 +22,7 @@ export class StoreService {
 
     private async _initialized() :
     Promise<void> {
-        //await this.storeRepository.deleteOrders()
+        await this.storeRepository.deleteOrders()
         const stores = (await this.storeRepository.getMany())
         .map(s => ({ ...s, storeId: s.uuid, isOpen: false } as RoomJoinOptions))
         await this.redis.set("stores", stores, StoreService.name)
@@ -32,19 +33,22 @@ export class StoreService {
         })
     }
 
-    async sendOrder(order: OrderEntity)
+    async sendOrder(order: OrderDto)
     : Promise<boolean> {
         const store = (await this.redis.get<RoomJoinOptions[]>("stores", StoreService.name))
         ?.find(s => s.storeId === order.store_uid)
         if(store && store.isOpen && store.socketId) {
             const orderId = this.auth.getRandUUID()
-            const create = await this.storeRepository.createOrder(order, orderId)
+            const create = await this.storeRepository.createOrder({
+                ...order,
+                uuid: orderId,
+            })
             .catch(err => {
                 Logger.error("주문 생성 실패", err) 
                 throw err
             })
 
-            return this.socket.sendOrder(store.socketId, { ...create, orderId })
+            return this.socket.sendOrder(store.socketId, create)
         }
 
         return false

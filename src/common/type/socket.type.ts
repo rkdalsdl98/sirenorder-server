@@ -10,7 +10,6 @@ export type LoginRequest = {
     & tags.Pattern<"[0-9a-zA-Z]{6,20}">
     & tags.Pattern<"[\!\`\~\@\#\$\%\^\&\*\_\+\=\/\>\<\?]{1,}">
 }
-
 export type SocketResponseBody<T> = {
     readonly result: boolean
     readonly message: string

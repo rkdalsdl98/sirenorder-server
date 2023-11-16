@@ -6,6 +6,7 @@ import { ERROR } from "../../common/type/response.type";
 import { StoreDetailEntity, WeeklyHours } from "./storedetail.entity";
 import { OrderEntity } from "../user/order.entity";
 import { MenuInfo } from "src/common/type/order.typs";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 @Injectable()
 export class StoreRepository implements IRepository<StoreEntity, StoreDetailEntity>  {
@@ -40,12 +41,12 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
         })).map(e => this.parsingEntity(e))
     }
 
-    async createOrder(order: OrderEntity, orderId: string)
+    async createOrder(order: OrderEntity)
     : Promise<OrderEntity> {
         return this.parsingOrderEntity(await this.prisma.order.create({
             data: {
                 store_uid: order.store_uid,
-                uuid: orderId,
+                uuid: order.uuid,
                 deliveryinfo: order.deliveryinfo,
                 menus: order.menus,
                 saleprice: order.saleprice,
@@ -61,6 +62,12 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
         return this.parsingOrderEntity(await this.prisma.order.delete({
             where: { uuid: orderId }
         }).catch(err => {
+            if(err instanceof PrismaClientKnownRequestError) {
+                switch(err.code) {
+                    case "P2025":
+                        throw ERROR.NotFoundData
+                }
+            }
             Logger.error("데이터를 삭제하는데 실패했습니다.", err.toString(), StoreRepository)
             throw ERROR.ServerDatabaseError
         }))
@@ -97,6 +104,7 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
     parsingOrderEntity(e) : OrderEntity {
         if(!e) throw ERROR.NotFoundData
         return {
+            uuid: e.uuid,
             totalprice: e.totalprice,
             saleprice: e.saleprice,
             store_uid: e.store_uid,

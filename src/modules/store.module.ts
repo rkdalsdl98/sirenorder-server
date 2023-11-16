@@ -30,7 +30,6 @@ import { SocketModule } from "./socket.module";
         ConfigService,
         MerchantRepository,
         MerchantService,
-    ],
-    exports: [MerchantRepository]
+    ]
 })
 export class StoreModule {}

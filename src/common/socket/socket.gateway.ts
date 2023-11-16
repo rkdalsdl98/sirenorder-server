@@ -20,6 +20,7 @@ import { SocketEventHandler } from "./event.handler";
 import { RedisService } from "src/services/redis.service";
 import { StoreWalletEntity } from "src/repositories/store/storewallet.entity";
 import { OrderEntity } from "src/repositories/user/order.entity";
+import { StoreRepository } from "src/repositories/store/store.repository";
 
 dotenv.config()
 const port : number = parseInt(process.env.SOCKET_PORT ?? "3001")
@@ -32,6 +33,7 @@ export class SocketGateWay
 implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     constructor(
         private readonly merchantRepository: MerchantRepository,
+        private readonly storeRepository: StoreRepository,
         private readonly auth: AuthService,
         private readonly redis: RedisService,
     ){}
@@ -42,6 +44,34 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     async pingPong(
     ) {
         return { message: 'pong' }
+    }
+
+    @SubscribeMessage('refuse-order')
+    async handleRefuseOrder(
+        @MessageBody() data: OrderEntity
+    ) : Promise<SocketResponse<
+    any, 
+    | typeof ERROR.ServerDatabaseError
+    | typeof ERROR.NotFoundData
+    >> {
+        try {
+            const result : boolean 
+            = !!(await this.storeRepository.deleteOrder(data.uuid)
+            .catch(err => {
+                Logger.log("주문 삭제중 오류가 발생했습니다.", SocketGateWay.name)
+                throw err
+            }))
+            return {
+                result,
+                message: "refuse",
+            }
+        } catch(e) {
+            return {
+                result: false,
+                message: "fail",
+                data: e,
+            }
+        }
     }
 
     /**
@@ -90,7 +120,7 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
         }
     }
 
-    sendOrder(socketId: string, order: OrderEntity & { orderId: string })
+    sendOrder(socketId: string, order: OrderEntity)
     : boolean {
         return this.server
         .timeout(1000)
