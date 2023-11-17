@@ -11,7 +11,6 @@ export interface UserEntity {
     readonly wallet: WalletEntity | null
     readonly gifts: GiftEntity[]
     readonly coupons: string[]
-    readonly order: OrderEntity | null
     readonly orderhistory: OrderHistory[]
     readonly accesstoken: string | null,
     readonly refreshtoken: string | null,
@@ -23,4 +22,9 @@ export interface UserEntity {
 type NestiedType<T> = {
     [key in keyof T]: T[key]
 }
-export type OrderHistory = NestiedType<Omit<OrderEntity, "uuid"> & { store_uid: string }>
+export type OrderHistory = 
+NestiedType<Omit<OrderEntity, 
+| "uuid" 
+| "merchant_uid"
+| "deliveryinfo"
+> & { store_uid: string }>

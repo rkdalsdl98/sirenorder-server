@@ -3,7 +3,10 @@ import { tags } from "typia"
 export namespace UserQuery {
     export interface UserQueryLoginOptions {
         readonly email: string & tags.Format<"email">
-        readonly pass: string & tags.Pattern<"[a-zA-Z]+"> & tags.MaxLength<20>
+        readonly pass: 
+        string 
+        & tags.Pattern<"[0-9a-zA-Z]{6,20}">
+        & tags.Pattern<"[\!\`\~\@\#\$\%\^\&\*\_\+\=\/\>\<\?]{1,}">
     }
 
     export interface UserQueryRegistOptions extends UserQueryLoginOptions {

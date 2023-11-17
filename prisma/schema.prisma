@@ -20,7 +20,6 @@ model user {
   wallet wallet? @relation("UserWallet")
   gifts gift[] @relation("Gift")
   coupons String[]
-  order linkedorder?
   orderhistory Json[]
   accesstoken String?
   refreshtoken String?
@@ -56,23 +55,9 @@ model order {
   uuid String @id
   saleprice Int @default(0)
   totalprice Int @default(0)
-  merchant_uid String @unique
-  menuinfo Json
-  order linkedorder?
-}
-
-// order 부분에 merchant_uid와 DB에 merchant uuid는 서로 다른것 이다.
-// menuinfo = { name, price, thumbnail, count, size, bottle, tempture }
-
-model linkedorder {
-  user user @relation(fields: [user_uid], references: [uuid], onDelete: NoAction, onUpdate: NoAction)
-  user_uid String @unique
-  order order @relation(fields: [order_uid], references: [uuid])
-  order_uid String @unique
-  store store @relation(fields: [store_uid], references: [uuid], onDelete: Cascade)
-  store_uid String @unique
-
-  @@id([user_uid, store_uid, order_uid])
+  deliveryinfo Json
+  store_uid String
+  menus Json[]
 }
 
 model merchant {
@@ -84,12 +69,10 @@ model merchant {
 
 model store {
   uuid String @id
-  store_code Int @unique @default(autoincrement())
   storename String
   thumbnail String?
   location Json
   address String
-  order linkedorder?
   merchant merchant @relation("Store", references: [uuid], fields: [owner_uid], onDelete: Cascade)
   owner_uid String @unique
   wallet storewallet? @relation("StoreWallet")
@@ -98,7 +81,7 @@ model store {
 
 model storedetail {
   id Int @id @default(autoincrement())
-  decscription String?
+  description String?
   images String[]
   openhours Json?
   sirenorderhours Json?
@@ -122,7 +105,7 @@ model storewallet {
 model sales {
   id Int @id @default(autoincrement())
   amounts Int @default(0)
-  menuinfo Json
+  menus Json[]
   salesdate String
   currwallet storewallet @relation("Sales", references: [uuid], fields: [wallet_uid], onDelete: Cascade)
   wallet_uid String @unique
