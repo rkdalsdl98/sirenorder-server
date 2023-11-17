@@ -34,7 +34,7 @@ export class StoreService {
     }
 
     async sendOrder(order: OrderDto)
-    : Promise<boolean> {
+    : Promise<{ orderId: string | null, result: boolean }> {
         const store = (await this.redis.get<RoomJoinOptions[]>("stores", StoreService.name))
         ?.find(s => s.storeId === order.store_uid)
         if(store && store.isOpen && store.socketId) {
@@ -48,10 +48,25 @@ export class StoreService {
                 throw err
             })
 
-            return this.socket.sendOrder(store.socketId, create)
+            const result = this.socket.sendOrder(store.socketId, create)
+            if(result) {
+                await this.redis.set(orderId, "wait", StoreService.name)
+                return {
+                    orderId,
+                    result,
+                }
+            }
+
+            return {
+                orderId: null,
+                result,
+            }
         }
 
-        return false
+        return {
+            orderId: null,
+            result: false,
+        }
     }
 
     async getStoreDetailBy(id: number) : 

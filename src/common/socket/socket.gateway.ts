@@ -46,6 +46,33 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
         return { message: 'pong' }
     }
 
+    @SubscribeMessage('accept-order')
+    async handleAccpetOrder(
+        @MessageBody() data: string
+    ) : Promise<SocketResponse<
+    any,
+    | typeof ERROR.ServerDatabaseError
+    | typeof ERROR.NotFoundData>> {
+        try {
+            await this.redis.set(data, "accept", SocketGateWay.name)
+            .catch(err => {
+                Logger.error("주문 승인중 오류가 발생했습니다.", SocketGateWay.name)
+                throw err
+            })
+            
+            return {
+                result: true,
+                message: "accept",
+            }
+        } catch(e) {
+            return {
+                result: false,
+                message: "fail",
+                data: e,
+            }
+        }
+    }
+
     @SubscribeMessage('refuse-order')
     async handleRefuseOrder(
         @MessageBody() data: OrderEntity
@@ -57,8 +84,12 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
         try {
             const result : boolean 
             = !!(await this.storeRepository.deleteOrder(data.uuid)
+            .then(async res => {
+                await this.redis.set(data.uuid, "refuse", SocketGateWay.name)
+                return res
+            })
             .catch(err => {
-                Logger.log("주문 삭제중 오류가 발생했습니다.", SocketGateWay.name)
+                Logger.error("주문 삭제중 오류가 발생했습니다.", SocketGateWay.name)
                 throw err
             }))
             return {

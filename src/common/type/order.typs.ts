@@ -11,3 +11,9 @@ export type MenuInfo = {
 export type MenuSize = "default" | "mega"
 export type MenuBottle = "persornal" | "disposable" | "plastic"
 export type MenuTempture = "ice" | "hot"
+
+export type OrderState = 
+| "wait" 
+| "refuse" 
+| "accept"
+| "finish"

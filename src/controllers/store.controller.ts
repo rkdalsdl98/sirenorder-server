@@ -63,7 +63,7 @@ export class StoreController {
     async sendOrder(
         @TypedBody() body : StoreBody.StoreBodyCreateOrderOptions
     ) : Promise<TryCatch<
-    boolean,
+    { orderId: string | null, result: boolean },
     | typeof ERROR.ServerDatabaseError
     | typeof ERROR.ServiceUnavailableException
     >> {
