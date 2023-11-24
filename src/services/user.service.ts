@@ -23,6 +23,7 @@ export class UserService {
     private async _initialized() :
     Promise<void> {
         const users = await this.userRepository.getMany()
+        console.log(users)
         await this.redis.set("users", users, UserService.name)
         .then(_=> Logger.log("유저정보 인 메모리 캐싱"))
         .catch(err => {
@@ -38,7 +39,7 @@ export class UserService {
      * @param nickname 
      * @returns boolean
      */
-    async registUser(email: string, pass: string, nickname: string) :
+    async publishCode(email: string, pass: string, nickname: string) :
     Promise<boolean> {
         const { salt, hash } = this.auth.encryption({ pass })
         const code = this.auth.generateRandStr()
@@ -77,9 +78,29 @@ export class UserService {
             error.substatus = "NotValidCode"
             throw error
         }
+
+        await this.redis.delete(code, UserService.name)
+        .then(async _=> {
+            await this.redis.set(
+                data.email, 
+                data, 
+                UserService.name,
+                600,
+            )
+        })
+        return true
+    }
+    
+    async registUser(email: string) :
+    Promise<boolean> {
+        const data = await this.redis.get<{ salt: string, hash: string, nickname: string, email: string }>(email, UserService.name)
+        if(data === null) {
+            var error = ERROR.NotFoundData
+            throw error
+        }
         const createdUser = await this.userRepository.create({ ...data, uuid: this.auth.getRandUUID() })
         await this._upsertCache(createdUser)
-        .then(async _=> await this.redis.delete(code, UserService.name))
+        .then(async _=> await this.redis.delete(email, UserService.name))
         
         return true
     }

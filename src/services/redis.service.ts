@@ -28,10 +28,10 @@ export class RedisService {
 
     async delete(key: string, path: string) : Promise<void> {
         await this.redisClient.del(key)
-        .catch(e => {
-            Logger.error("레디스 캐시 삭제 실패", e.toString(), path)
-            throw typeof ERROR.ServerCacheError
-        })
+        // .catch(e => {
+        //     Logger.error("레디스 캐시 삭제 실패", e.toString(), path)
+        //     throw typeof ERROR.ServerCacheError
+        // })
     }
 
     async reset(path: string) : Promise<void> {

@@ -55,11 +55,12 @@ export class StoreService {
                     orderId,
                     result,
                 }
-            }
-
-            return {
-                orderId: null,
-                result,
+            } else {
+                await this.storeRepository.deleteOrder(orderId)
+                return {
+                    orderId: null,
+                    result,
+                }
             }
         }
 

@@ -145,6 +145,7 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
     }
 
     parsingEntity(e) : UserEntity {
+        if(!e) throw ERROR.NotFoundData
         return {
             uuid: e.uuid,
             email: e.email,

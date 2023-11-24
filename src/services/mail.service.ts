@@ -16,7 +16,7 @@ export class EmailService {
         <br>
             <h2>${secret}</h2>
             <p>
-            ${(this.config.get<number>("EMAIL_TTL") ?? 60) / 60}분 안에\n
+            ${(this.config.get<number>("EMAIL_TTL") ?? 60) / 60}분 이내에\n
             상단에 보이는 숫자를 어플화면에서 입력하고 확인을 눌러주세요.
             </p>
         </br>

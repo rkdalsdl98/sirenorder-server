@@ -15,8 +15,8 @@ export class UserController {
         private readonly userService: UserService
     ){}
     
-    @TypedRoute.Post("regist")
-    async registUser(
+    @TypedRoute.Post("regist/publish")
+    async publishCode(
         @TypedQuery() query : UserQuery.UserQueryRegistOptions
     ) : Promise<TryCatch<
     boolean,
@@ -24,7 +24,7 @@ export class UserController {
     | typeof ERROR.FailedSendMail
     >> {
         try {
-            const result = await this.userService.registUser(query.email, query.pass, query.nickname)
+            const result = await this.userService.publishCode(query.email, query.pass, query.nickname)
             return { 
                 data: result, 
                 status: 201
@@ -45,6 +45,26 @@ export class UserController {
             return {
                 data: result,
                 status: 201
+            }
+        } catch(e) {
+            console.log(e)
+            return e
+        }
+    }
+
+    @TypedRoute.Post("regist")
+    async registUser(
+        @TypedQuery() query : UserQuery.UserQueryCreateOptions
+    ) : Promise<TryCatch<
+    boolean,
+    | typeof ERROR.ServerDatabaseError
+    | typeof ERROR.NotFoundData
+    >> {
+        try {
+            const result = await this.userService.registUser(query.email)
+            return {
+                data: result,
+                status: 201,
             }
         } catch(e) { return e }
     }
@@ -103,5 +123,14 @@ export class UserController {
     async chargePoint() {}
 
     @TypedRoute.Delete()
-    async deleteUser() {}
+    async deleteUser(
+        @TypedQuery() query: { email: string },
+    ) {
+        try {
+            return await this.userService.deleteUser(query.email)
+        } catch(e) {
+            console.log(e)
+            return e
+        }
+    }
 }

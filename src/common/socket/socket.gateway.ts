@@ -65,6 +65,7 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
                 message: "accept",
             }
         } catch(e) {
+            await this.storeRepository.deleteOrder(data)
             return {
                 result: false,
                 message: "fail",
