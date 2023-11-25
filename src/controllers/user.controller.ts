@@ -82,7 +82,7 @@ export class UserController {
             const result = await this.userService.loginByPass(query.email, query.pass)
             return {
                 data: result,
-                status: 200
+                status: 201
             }
         } catch(e) { return e }
     }

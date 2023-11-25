@@ -98,7 +98,11 @@ export class UserService {
             var error = ERROR.NotFoundData
             throw error
         }
-        const createdUser = await this.userRepository.create({ ...data, uuid: this.auth.getRandUUID() })
+        const createdUser = await this.userRepository.create({ 
+            ...data, 
+            uuid: this.auth.getRandUUID(), 
+            wallet_uid: this.auth.getRandUUID(), 
+        })
         await this._upsertCache(createdUser)
         .then(async _=> await this.redis.delete(email, UserService.name))
         

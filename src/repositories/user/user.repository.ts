@@ -30,7 +30,13 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
     async getMany(): Promise<UserEntity[]> {
         return (await this.prisma.user.findMany({
             include: {
-                wallet: true,
+                wallet: {
+                    select: {
+                        point: true,
+                        stars: true,
+                        uuid: true,
+                    }
+                },
                 gifts: true,
             }
         })
@@ -48,7 +54,13 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
                 email: args.email,
             },
             include: {
-                wallet: true,
+                wallet: {
+                    select: {
+                        point: true,
+                        stars: true,
+                        uuid: true,
+                    }
+                },
                 gifts: true,
             }
         })
@@ -70,6 +82,7 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
         nickname: string, 
         email: string,
         uuid: string,
+        wallet_uid: string,
      }): Promise<UserEntity> {
         return this.parsingEntity(await this.prisma.user.create({
             data: {
@@ -78,6 +91,9 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
                 nickname: args.nickname,
                 pass: args.hash,
                 salt: args.salt,
+                wallet: {
+                    create: { uuid: args.wallet_uid }
+                }
             },
             include: {
                 wallet: true,
@@ -152,7 +168,7 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
             nickname: e.nickname,
             pass: e.pass,
             salt: e.salt,
-            wallet: e.wallet as WalletEntity,
+            wallet: e.wallet as Omit<WalletEntity, "user_uid">,
             gifts: [...e.gifts.map(g => ({ ...g } as GiftEntity))],
             coupons: e.coupons,
             orderhistory: Object.keys(e.orderhistory).map(key => {
