@@ -155,7 +155,7 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     sendOrder(socketId: string, order: OrderEntity)
     : boolean {
         return this.server
-        .timeout(1000)
+        .timeout(300)
         .to(socketId)
         .emit(
             "order", 

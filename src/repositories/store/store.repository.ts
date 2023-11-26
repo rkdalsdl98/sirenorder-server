@@ -46,6 +46,7 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
         return this.parsingOrderEntity(await this.prisma.order.create({
             data: {
                 store_uid: order.store_uid,
+                imp_uid: order.imp_uid,
                 uuid: order.uuid,
                 deliveryinfo: order.deliveryinfo,
                 menus: order.menus,
@@ -80,6 +81,7 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
     parsingEntity(e) : StoreEntity {
         return {
             uuid: e.uuid,
+            imp_uid: e.imp_uid,
             storename: e.storename,
             thumbnail: e.thumbnail,
             location: e.location as LatLng,

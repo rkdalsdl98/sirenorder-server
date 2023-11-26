@@ -53,6 +53,7 @@ model coupon {
 
 model order {
   uuid String @id
+  imp_uid String
   saleprice Int @default(0)
   totalprice Int @default(0)
   deliveryinfo Json
@@ -69,6 +70,7 @@ model merchant {
 
 model store {
   uuid String @id
+  imp_uid String
   storename String
   thumbnail String?
   location Json

@@ -1,5 +1,6 @@
 export type MerchantDto = {
     readonly pass: string
+    readonly imp_uid: string
     readonly storeinfo: StoreInfoDto
 }
 

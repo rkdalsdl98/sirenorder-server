@@ -23,7 +23,6 @@ export class UserService {
     private async _initialized() :
     Promise<void> {
         const users = await this.userRepository.getMany()
-        console.log(users)
         await this.redis.set("users", users, UserService.name)
         .then(_=> Logger.log("유저정보 인 메모리 캐싱"))
         .catch(err => {

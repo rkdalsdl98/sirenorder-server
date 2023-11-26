@@ -70,6 +70,7 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
                 store: {
                     create: {
                         uuid: args.uuids.store,
+                        imp_uid: args.createData.imp_uid,
                         address: args.createData.storeinfo.address,
                         location: {
                             latitude: 0,
@@ -109,6 +110,19 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
                                 uuid: args.uuids.wallet
                             }
                         }
+                    }
+                }
+            },
+            include: {
+                store: {
+                    select: {
+                        uuid: true,
+                        imp_uid: true,
+                        address: true,
+                        location: true,
+                        storename: true,
+                        thumbnail: true,
+                        detail: {select: { id: true }},
                     }
                 }
             }

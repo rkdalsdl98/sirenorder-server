@@ -2,6 +2,7 @@ import { MenuInfo } from "../../common/type/order.typs"
 
 export interface OrderEntity {
     readonly uuid: string
+    readonly imp_uid: string
     readonly saleprice: number
     readonly totalprice: number
     readonly store_uid: string

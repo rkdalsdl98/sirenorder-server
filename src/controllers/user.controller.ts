@@ -113,9 +113,6 @@ export class UserController {
     @TypedRoute.Post("payment/order")
     async paymentOrder() {}
 
-    @TypedRoute.Post("payment/order/webhook")
-    async sendOrderToMerchant() {}
-
     @TypedRoute.Post("payment/point")
     async paymentPoint() {}
 

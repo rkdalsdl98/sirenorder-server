@@ -7,7 +7,9 @@ import { RoomJoinOptions } from "src/common/type/socket.type";
 import { SocketGateWay } from "src/common/socket/socket.gateway";
 import { OrderEntity } from "src/repositories/user/order.entity";
 import { AuthService } from "./auth.service";
-import { OrderDto } from "src/dto/user.dto";
+import { ConfigService } from "@nestjs/config";
+import { ERROR } from "src/common/type/response.type";
+import { PaymentData } from "src/common/type/payment";
 
 @Injectable()
 export class StoreService {
@@ -16,6 +18,7 @@ export class StoreService {
         private readonly redis: RedisService,
         private readonly socket: SocketGateWay,
         private readonly auth: AuthService,
+        private readonly config: ConfigService,
     ){
         this._initialized()
     }
@@ -33,41 +36,18 @@ export class StoreService {
         })
     }
 
-    async sendOrder(order: OrderDto)
-    : Promise<{ orderId: string | null, result: boolean }> {
+    async sendOrder({
+        order_uid,
+        imp_uid,
+        status,
+    })
+    : Promise<boolean> {
         const store = (await this.redis.get<RoomJoinOptions[]>("stores", StoreService.name))
-        ?.find(s => s.storeId === order.store_uid)
+        ?.find(s => s.imp_uid === imp_uid)
         if(store && store.isOpen && store.socketId) {
-            const orderId = this.auth.getRandUUID()
-            const create = await this.storeRepository.createOrder({
-                ...order,
-                uuid: orderId,
-            })
-            .catch(err => {
-                Logger.error("주문 생성 실패", err) 
-                throw err
-            })
-
-            const result = this.socket.sendOrder(store.socketId, create)
-            if(result) {
-                await this.redis.set(orderId, "wait", StoreService.name)
-                return {
-                    orderId,
-                    result,
-                }
-            } else {
-                await this.storeRepository.deleteOrder(orderId)
-                return {
-                    orderId: null,
-                    result,
-                }
-            }
+            
         }
-
-        return {
-            orderId: null,
-            result: false,
-        }
+        return false
     }
 
     async getStoreDetailBy(id: number) : 
@@ -92,6 +72,61 @@ export class StoreService {
     async getStores() :
     Promise<StoreDto[]> {
         return await this._getStores()
+    }
+
+    private async _findOrderInfo(imp_uid: string) {
+        const token = await this._getCertifiToken()
+        const paymentData : PaymentData = await this._getPaymentData(imp_uid, token)
+    }
+
+    private async _getPaymentData(imp_uid: string, token: string) {
+        const paymentData = await fetch(`https://api.iamport.kr/payments/${imp_uid}`,
+            {
+                method: "GET",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": token,
+                },
+            }
+        )
+        .then(res => res.json())
+        .then(json => {
+            const { response } = json
+            return { ...response } as PaymentData
+        })
+        .catch(err => {
+            console.log(err)
+            Logger.error("주문정보 조회 실패", StoreService.name)
+            throw ERROR.NotFoundData
+        })
+
+        return paymentData
+    }
+
+    private async _getCertifiToken() : Promise<string> {
+        const impKey = this.config.get<string>("IMP_KEY")
+        const impSecret = this.config.get<string>("IMP_SECRET")
+
+        const token = await fetch("https://api.iamport.kr/users/getToken",{
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                imp_key: impKey,
+                imp_secret: impSecret
+            })
+        })
+        .then(res => res.json())
+        .then(json => {
+            const { response } = json
+            return response.access_token
+        })
+        .catch(err => {
+            console.log(err)
+            Logger.error("상점 자격인증 실패", StoreService.name)
+            throw ERROR.UnAuthorized
+        })
+
+        return token
     }
 
     /**
