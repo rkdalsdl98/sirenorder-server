@@ -5,6 +5,8 @@ export type SubStatus =
 | "ExpiredToken" 
 | "NotValidCode"
 | "Duplicated"
+| "UnAuthorzied"
+| "OrderLookupFailed"
 
 export type SuccessResponse<T> = {
     readonly data: T

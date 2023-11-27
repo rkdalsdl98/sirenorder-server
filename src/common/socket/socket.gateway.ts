@@ -10,8 +10,8 @@ import {
     WebSocketServer, 
 } from "@nestjs/websockets"
 import { Server, Socket } from "socket.io";
-import { LoginRequest, SocketResponse, SocketResponseBody } from "../type/socket.type";
-import { ERROR, FailedResponse } from "../type/response.type";
+import { LoginRequest, SocketResponse } from "../type/socket.type";
+import { ERROR } from "../type/response.type";
 import { AuthService } from "src/services/auth.service";
 
 import * as dotenv from "dotenv"
@@ -21,6 +21,8 @@ import { RedisService } from "src/services/redis.service";
 import { StoreWalletEntity } from "src/repositories/store/storewallet.entity";
 import { OrderEntity } from "src/repositories/user/order.entity";
 import { StoreRepository } from "src/repositories/store/store.repository";
+import { PortOneMethod } from "../methods/portone.method";
+import { RefuseOrder } from "../type/order.type";
 
 dotenv.config()
 const port : number = parseInt(process.env.SOCKET_PORT ?? "3001")
@@ -54,14 +56,14 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     | typeof ERROR.ServerDatabaseError
     | typeof ERROR.NotFoundData>> {
         try {
-            await this.redis.set(data, "accept", SocketGateWay.name)
-            .catch(err => {
-                Logger.error("주문 승인중 오류가 발생했습니다.", SocketGateWay.name)
-                throw err
+            const result = await PortOneMethod.acceptOrder({
+                redis: this.redis,
+                order_uid: data,
+                repository: this.storeRepository,
             })
             
             return {
-                result: true,
+                result,
                 message: "accept",
             }
         } catch(e) {
@@ -76,23 +78,18 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
 
     @SubscribeMessage('refuse-order')
     async handleRefuseOrder(
-        @MessageBody() data: OrderEntity
+        @MessageBody() data: RefuseOrder
     ) : Promise<SocketResponse<
     any, 
     | typeof ERROR.ServerDatabaseError
     | typeof ERROR.NotFoundData
     >> {
         try {
-            const result : boolean 
-            = !!(await this.storeRepository.deleteOrder(data.uuid)
-            .then(async res => {
-                await this.redis.set(data.uuid, "refuse", SocketGateWay.name)
-                return res
+            const result : boolean = await PortOneMethod.refuseOrder({
+                reason: data.reason,
+                imp_uid: data.imp_uid,
+                redis: this.redis
             })
-            .catch(err => {
-                Logger.error("주문 삭제중 오류가 발생했습니다.", SocketGateWay.name)
-                throw err
-            }))
             return {
                 result,
                 message: "refuse",

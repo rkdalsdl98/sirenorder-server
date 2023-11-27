@@ -5,7 +5,7 @@ import { LatLng, StoreEntity } from "./store.entity";
 import { ERROR } from "../../common/type/response.type";
 import { StoreDetailEntity, WeeklyHours } from "./storedetail.entity";
 import { OrderEntity } from "../user/order.entity";
-import { MenuInfo } from "src/common/type/order.typs";
+import { MenuInfo } from "src/common/type/order.type";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 @Injectable()

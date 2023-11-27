@@ -1,4 +1,4 @@
-import { MenuInfo } from "../../common/type/order.typs"
+import { MenuInfo } from "../../common/type/order.type"
 
 export interface OrderEntity {
     readonly uuid: string

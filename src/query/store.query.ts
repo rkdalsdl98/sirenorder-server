@@ -1,4 +1,4 @@
-import { MenuInfo } from "src/common/type/order.typs"
+import { MenuInfo } from "src/common/type/order.type"
 import { DeliveryInfo } from "src/repositories/user/order.entity"
 
 export namespace StoreQuery {

@@ -1,4 +1,4 @@
-import { MenuInfo } from "src/common/type/order.typs"
+import { MenuInfo } from "src/common/type/order.type"
 
 export interface SalesEntity {
     readonly id?: number

@@ -10,6 +10,8 @@ import { AuthService } from "./auth.service";
 import { ConfigService } from "@nestjs/config";
 import { ERROR } from "src/common/type/response.type";
 import { PaymentData } from "src/common/type/payment";
+import { OrderDto, OrderInfo } from "src/dto/user.dto";
+import { PortOneMethod } from "src/common/methods/portone.method";
 
 @Injectable()
 export class StoreService {
@@ -36,18 +38,53 @@ export class StoreService {
         })
     }
 
+    // 실패 구문마다 주문 취소 루틴을 넣어주자
     async sendOrder({
         order_uid,
         imp_uid,
         status,
     })
     : Promise<boolean> {
+        let result = false
+
         const store = (await this.redis.get<RoomJoinOptions[]>("stores", StoreService.name))
         ?.find(s => s.imp_uid === imp_uid)
         if(store && store.isOpen && store.socketId) {
-            
+            const order: OrderDto = await PortOneMethod.findOrder(imp_uid)
+            const userUUIDs = { order_uid, imp_uid }
+            const portOneUUIDs = { order_uid: order.merchant_uid, imp_uid: order.imp_uid }
+
+            let orderInfo: OrderInfo | null = order.custom_data as OrderInfo
+
+            if(!orderInfo || this._equalUUIds(portOneUUIDs, userUUIDs)) {
+                this._refuseOrder(imp_uid)
+                var err = ERROR.BadRequest
+                err.substatus = "ForgeryData"
+                throw err
+            } else if(!store.socketId) {
+                this._refuseOrder(imp_uid)
+                throw ERROR.ServiceUnavailableException
+            }
+
+            const orderEntity = {
+                uuid: order.merchant_uid,
+                imp_uid: order.imp_uid,
+                saleprice: 0,
+                totalprice: order.amount,
+                store_uid: store.storeId,
+                deliveryinfo: orderInfo.deliveryinfo,
+                menus: orderInfo.menus,
+            } as OrderEntity
+
+            await this.redis.set(orderEntity.uuid, orderEntity, StoreService.name)
+            .catch( err => {
+                this._refuseOrder(imp_uid)
+                Logger.error("주문정보 캐싱 실패", StoreService.name)
+                throw err
+            })
+            result = this.socket.sendOrder(store.socketId, orderEntity)
         }
-        return false
+        return result
     }
 
     async getStoreDetailBy(id: number) : 
@@ -74,59 +111,26 @@ export class StoreService {
         return await this._getStores()
     }
 
-    private async _findOrderInfo(imp_uid: string) {
-        const token = await this._getCertifiToken()
-        const paymentData : PaymentData = await this._getPaymentData(imp_uid, token)
+    private _equalUUIds(
+        portOne: {imp_uid: string, order_uid: string},
+        user: {imp_uid: string, order_uid: string},
+    ) : boolean {
+        return portOne.imp_uid === user.imp_uid && portOne.order_uid === user.order_uid
     }
 
-    private async _getPaymentData(imp_uid: string, token: string) {
-        const paymentData = await fetch(`https://api.iamport.kr/payments/${imp_uid}`,
-            {
-                method: "GET",
-                headers: { 
-                    "Content-Type": "application/json",
-                    "Authorization": token,
-                },
-            }
-        )
-        .then(res => res.json())
-        .then(json => {
-            const { response } = json
-            return { ...response } as PaymentData
+    private async _refuseOrder(imp_uid: string)
+    : Promise<void> {
+        const refused = await PortOneMethod.refuseOrder({
+            redis: this.redis,
+            reason: "조리불가",
+            imp_uid,
         })
         .catch(err => {
-            console.log(err)
-            Logger.error("주문정보 조회 실패", StoreService.name)
-            throw ERROR.NotFoundData
+            Logger.error("주문삭제 실패", StoreService.name)
+            throw err
         })
 
-        return paymentData
-    }
-
-    private async _getCertifiToken() : Promise<string> {
-        const impKey = this.config.get<string>("IMP_KEY")
-        const impSecret = this.config.get<string>("IMP_SECRET")
-
-        const token = await fetch("https://api.iamport.kr/users/getToken",{
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                imp_key: impKey,
-                imp_secret: impSecret
-            })
-        })
-        .then(res => res.json())
-        .then(json => {
-            const { response } = json
-            return response.access_token
-        })
-        .catch(err => {
-            console.log(err)
-            Logger.error("상점 자격인증 실패", StoreService.name)
-            throw ERROR.UnAuthorized
-        })
-
-        return token
+        if(!refused) Logger.error("주문삭제 실패", StoreService.name)
     }
 
     /**

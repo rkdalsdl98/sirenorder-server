@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { IRepository } from "../../common/interface/irepository";
 import { PrismaService } from "../../services/prisma.service";
 import { OrderHistory, UserEntity } from "./user.entity";
-import { MenuInfo } from "../../common/type/order.typs";
+import { MenuInfo } from "../../common/type/order.type";
 import { ERROR } from "../../common/type/response.type";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { WalletEntity } from "./wallet.entity";
