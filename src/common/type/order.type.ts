@@ -19,6 +19,7 @@ export type OrderState =
 | "finish"
 
 export type RefuseOrder = {
+    readonly uuid: string
     readonly imp_uid: string
     readonly reason: string
 }

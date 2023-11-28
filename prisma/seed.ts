@@ -17,6 +17,7 @@ async function main() {
             en_name: menu.en_name,
             price: menu.price,
             thumbnail: menu.thumbnail,
+            category: menu.category,
             detail: {
                 connectOrCreate: {
                     where: { id: key },

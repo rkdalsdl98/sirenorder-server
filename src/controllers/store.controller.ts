@@ -5,7 +5,6 @@ import { StoreDetailDto, StoreDto } from "../dto/store.dto";
 import { StoreService } from "../services/store.service";
 import { PortOneRequest, StoreQuery } from "src/query/store.query";
 import { OrderEntity } from "src/repositories/user/order.entity";
-import { retry } from "rxjs";
 
 @Controller('store')
 export class StoreController {
@@ -66,7 +65,11 @@ export class StoreController {
     ) {
         try {
             console.log(body)
-            //await this.storeService.sendOrder()
+            await this.storeService.sendOrder({
+                imp_uid: body.imp_uid,
+                order_uid: body.merchant_uid,
+                status: body.status,
+            })
             return 201
         } catch(e) {
             return 400

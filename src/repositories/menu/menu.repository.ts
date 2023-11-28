@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { IRepository } from "src/common/interface/irepository";
-import { MenuEntity } from "./menu.entity";
+import { Category, MenuEntity } from "./menu.entity";
 import { PrismaService } from "src/services/prisma.service";
 import { ERROR } from "src/common/type/response.type";
 import { MenuDetailEntity } from "./menudetail.entity";
@@ -38,8 +38,11 @@ export class MenuRepository implements IRepository<MenuEntity, MenuDetailEntity>
         }))
     }
 
-    async getMany(): Promise<MenuEntity[]> {
-        return (await this.prisma.menu.findMany({ include: { detail: { select: { id: true }} }})
+    async getMany(category?: Category): Promise<MenuEntity[]> {
+        return (await this.prisma.menu.findMany({
+            where: { category },
+            include: { detail: { select: { id: true }} 
+        }})
         .catch(err => {
             Logger.error("데이터를 불러오는데 실패했습니다.", err.toString(), MenuRepository)
             throw ERROR.ServerDatabaseError
@@ -57,6 +60,7 @@ export class MenuRepository implements IRepository<MenuEntity, MenuDetailEntity>
     parsingMenuEntity(e) : MenuEntity {
         return {
             id: e.id,
+            category: e.category,
             name: e.name,
             en_name: e.en_name,
             price: e.price,

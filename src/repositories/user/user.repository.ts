@@ -164,6 +164,7 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
         if(!e) throw ERROR.NotFoundData
         return {
             uuid: e.uuid,
+            tel: e.tel,
             email: e.email,
             nickname: e.nickname,
             pass: e.pass,

@@ -31,6 +31,18 @@ export namespace PortOneMethod {
         return !!(await repository.createOrder(order))
     }
 
+    export const refuseOrderById = async ({
+        redis,
+        order_uid,
+        reason,
+    } : {
+        redis: RedisService,
+        order_uid: string,
+        reason: string, 
+    }) => {
+        return await redis.delete(order_uid, logPath)
+    }
+
     export const refuseOrder = async ({
         redis,
         imp_uid,

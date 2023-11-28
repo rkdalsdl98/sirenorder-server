@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { MenuRepository } from "src/repositories/menu/menu.repository";
 import { RedisService } from "./redis.service";
-import { MenuEntity } from "src/repositories/menu/menu.entity";
+import { Category, MenuEntity } from "src/repositories/menu/menu.entity";
 import { MenuDto } from "src/dto/menu.dto";
 import { MenuDetailDto } from "src/dto/menudetail.dto";
 import { MenuDetailEntity } from "src/repositories/menu/menudetail.entity";
@@ -34,9 +34,9 @@ export class MenuService {
         })
     }
 
-    async getMenus() :
+    async getMenus(category?: Category) :
     Promise<MenuDto[]> {
-        return await this._findMenu()
+        return await this._findMenu(category)
     }
 
     async getMenuDetail(id: number) :
@@ -75,7 +75,7 @@ export class MenuService {
      * @param email 
      * @returns Menu
      */
-    private async _findMenu() :
+    private async _findMenu(category?: Category) :
     Promise<MenuDto[]> {
         const caches = (await this.redis.get<MenuEntity[]>("menus", MenuService.name)
         .catch(err => {
@@ -83,8 +83,10 @@ export class MenuService {
             throw err
         }))
 
-        if(caches !== null) return caches.map(c => ({ ...c } as MenuDto))
-        return (await this.menuRepository.getMany()
+        if(caches !== null) return caches.filter(c => {
+            return category !== undefined ? (c.category === category) : true
+        })
+        return (await this.menuRepository.getMany(category)
         .catch(err => {
             Logger.error("메뉴 리스트 조회 실패", err) 
             throw err

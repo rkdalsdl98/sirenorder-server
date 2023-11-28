@@ -17,6 +17,7 @@ model user {
   nickname String
   pass String
   salt String
+  tel String @default("000-0000-0000")
   wallet wallet? @relation("UserWallet")
   gifts gift[] @relation("Gift")
   coupons String[]
@@ -119,6 +120,7 @@ model menu {
   en_name String
   price Int @default(0)
   thumbnail String
+  category String @default("notdefined")
   detail menudetail? @relation("MenuDetail")
 }
 

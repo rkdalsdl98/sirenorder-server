@@ -1,8 +1,9 @@
-import { TypedParam, TypedRoute } from "@nestia/core";
+import { TypedParam, TypedQuery, TypedRoute } from "@nestia/core";
 import { Controller } from "@nestjs/common";
 import { ERROR, TryCatch } from "src/common/type/response.type";
 import { MenuDto } from "src/dto/menu.dto";
 import { MenuDetailDto } from "src/dto/menudetail.dto";
+import { MenuQuery } from "src/query/menu.query";
 import { MenuService } from "src/services/menu.service";
 
 @Controller('menu')
@@ -12,12 +13,14 @@ export class MenuController {
     ){}
 
     @TypedRoute.Get()
-    async getMenus() : Promise<TryCatch<
+    async getMenus(
+        @TypedQuery() query: MenuQuery.MenuQueryGetListOptions,
+    ) : Promise<TryCatch<
     MenuDto[],
     | typeof ERROR.ServerDatabaseError
     >> {
         try {
-            const result = await this.meunService.getMenus()
+            const result = await this.meunService.getMenus(query.category)
             return {
                 data: result,
                 status: 200,

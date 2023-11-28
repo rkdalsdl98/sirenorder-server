@@ -3,7 +3,8 @@
         "name": "아메리카노",
         "en_name": "Americano",
         "price": 2000,
-        "thumbnail": "https://www.google.com/",
+        "category": "drink",
+        "thumbnail": "https://firebasestorage.googleapis.com/v0/b/mocatmall.appspot.com/o/hot_americano.jpg?alt=media&token=1de4d71c-ec1c-4ae6-9f88-f3ea54a0cc02",
         "detail": {
             "description": "고소한 맛이 나는 커피",
             "allergys": [],
@@ -33,6 +34,32 @@
                     "transfat": 0.0,
                     "saturatedfat": 0.0,
                     "caffeine": 290.8
+                }
+            ]
+        }
+    },
+    "2": {
+        "name": "따끈따끈 베이커리",
+        "en_name": "Korean Streats Dessert Pack",
+        "price": 12000,
+        "category": "food",
+        "thumbnail": "https://firebasestorage.googleapis.com/v0/b/mocatmall.appspot.com/o/bread_pack.png?alt=media&token=1a819e37-5eb9-4e43-87e9-2cdfa7911bac",
+        "detail": {
+            "description": "겨울 대표 간식 팥&슈크림 붕어빵과\n앙버터호두과자, 꿀을 가득 머금은\n미니호떡으로 구성된 돌아온\n따끈따끈 간식꾸러미",
+            "allergys": [],
+            "nutritions": [
+                {
+                    "size": "default",
+                    "calorie": 521.79,
+                    "carbohydrate": 0.0,
+                    "sugars": 33.54,
+                    "salt": 270.12,
+                    "protein": 8.25,
+                    "fat": 0.0,
+                    "cholesterol": 0.0,
+                    "transfat": 0.0,
+                    "saturatedfat": 7.88,
+                    "caffeine": 0.0
                 }
             ]
         }

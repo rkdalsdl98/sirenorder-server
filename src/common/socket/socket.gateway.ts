@@ -85,13 +85,18 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     | typeof ERROR.NotFoundData
     >> {
         try {
-            const result : boolean = await PortOneMethod.refuseOrder({
+            // const result : boolean = await PortOneMethod.refuseOrder({
+            //     reason: data.reason,
+            //     imp_uid: data.imp_uid,
+            //     redis: this.redis
+            // })
+            await PortOneMethod.refuseOrderById({
+                redis: this.redis,
                 reason: data.reason,
-                imp_uid: data.imp_uid,
-                redis: this.redis
+                order_uid: data.uuid,
             })
             return {
-                result,
+                result: true,
                 message: "refuse",
             }
         } catch(e) {

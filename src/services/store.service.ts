@@ -9,7 +9,6 @@ import { OrderEntity } from "src/repositories/user/order.entity";
 import { AuthService } from "./auth.service";
 import { ConfigService } from "@nestjs/config";
 import { ERROR } from "src/common/type/response.type";
-import { PaymentData } from "src/common/type/payment";
 import { OrderDto, OrderInfo } from "src/dto/user.dto";
 import { PortOneMethod } from "src/common/methods/portone.method";
 
@@ -39,6 +38,7 @@ export class StoreService {
     }
 
     // 실패 구문마다 주문 취소 루틴을 넣어주자
+    // 주문취소 루틴에 주문번호를 넣어 캐시데이터만 삭제처리 하도록 해두었음
     async sendOrder({
         order_uid,
         imp_uid,
@@ -47,22 +47,24 @@ export class StoreService {
     : Promise<boolean> {
         let result = false
 
+        const order: OrderDto = await PortOneMethod.findOrder(imp_uid)
+        let { storeId, orderInfo } = JSON.parse(order.custom_data)
         const store = (await this.redis.get<RoomJoinOptions[]>("stores", StoreService.name))
-        ?.find(s => s.imp_uid === imp_uid)
+        ?.find(s => s.storeId === storeId)
+
         if(store && store.isOpen && store.socketId) {
-            const order: OrderDto = await PortOneMethod.findOrder(imp_uid)
+            orderInfo = JSON.parse(orderInfo)
             const userUUIDs = { order_uid, imp_uid }
             const portOneUUIDs = { order_uid: order.merchant_uid, imp_uid: order.imp_uid }
+            const { menus, deliveryinfo } = orderInfo
 
-            let orderInfo: OrderInfo | null = order.custom_data as OrderInfo
-
-            if(!orderInfo || this._equalUUIds(portOneUUIDs, userUUIDs)) {
-                this._refuseOrder(imp_uid)
+            if(!orderInfo || !this._equalUUIds(portOneUUIDs, userUUIDs)) {
+                this._refuseOrder(order_uid)
                 var err = ERROR.BadRequest
                 err.substatus = "ForgeryData"
                 throw err
             } else if(!store.socketId) {
-                this._refuseOrder(imp_uid)
+                this._refuseOrder(order_uid)
                 throw ERROR.ServiceUnavailableException
             }
 
@@ -72,13 +74,13 @@ export class StoreService {
                 saleprice: 0,
                 totalprice: order.amount,
                 store_uid: store.storeId,
-                deliveryinfo: orderInfo.deliveryinfo,
-                menus: orderInfo.menus,
+                deliveryinfo,
+                menus,
             } as OrderEntity
 
             await this.redis.set(orderEntity.uuid, orderEntity, StoreService.name)
             .catch( err => {
-                this._refuseOrder(imp_uid)
+                this._refuseOrder(order_uid)
                 Logger.error("주문정보 캐싱 실패", StoreService.name)
                 throw err
             })
@@ -118,19 +120,24 @@ export class StoreService {
         return portOne.imp_uid === user.imp_uid && portOne.order_uid === user.order_uid
     }
 
-    private async _refuseOrder(imp_uid: string)
+    private async _refuseOrder(uuid: string)
     : Promise<void> {
-        const refused = await PortOneMethod.refuseOrder({
-            redis: this.redis,
+        // const refused = await PortOneMethod.refuseOrder({
+        //     redis: this.redis,
+        //     reason: "조리불가",
+        //     imp_uid: uuid,
+        // })
+            
+        //if(!refused) Logger.error("주문삭제 실패", StoreService.name)
+        await PortOneMethod.refuseOrderById({
             reason: "조리불가",
-            imp_uid,
+            redis: this.redis,
+            order_uid: uuid,
         })
         .catch(err => {
             Logger.error("주문삭제 실패", StoreService.name)
             throw err
         })
-
-        if(!refused) Logger.error("주문삭제 실패", StoreService.name)
     }
 
     /**
