@@ -9,8 +9,9 @@ import { OrderEntity } from "src/repositories/user/order.entity";
 import { AuthService } from "./auth.service";
 import { ConfigService } from "@nestjs/config";
 import { ERROR } from "src/common/type/response.type";
-import { OrderDto, OrderInfo } from "src/dto/user.dto";
+import { OrderDto } from "src/dto/user.dto";
 import { PortOneMethod } from "src/common/methods/portone.method";
+import { OrderState, RegisteredOrder } from "src/common/type/order.type";
 
 @Injectable()
 export class StoreService {
@@ -76,7 +77,8 @@ export class StoreService {
                 store_uid: store.storeId,
                 deliveryinfo,
                 menus,
-            } as OrderEntity
+                state: "wait",
+            } as RegisteredOrder
 
             await this.redis.set(orderEntity.uuid, orderEntity, StoreService.name)
             .catch( err => {
@@ -111,6 +113,17 @@ export class StoreService {
     async getStores() :
     Promise<StoreDto[]> {
         return await this._getStores()
+    }
+
+    async getOrderState(order_uid: string)
+    : Promise<OrderState> {
+        const order = await this.redis.get<RegisteredOrder>(
+            order_uid,
+            StoreService.name,
+        )
+        if(order === null) return "refuse"
+        
+        return order.state
     }
 
     private _equalUUIds(

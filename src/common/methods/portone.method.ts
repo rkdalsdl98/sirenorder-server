@@ -3,8 +3,8 @@ import { RedisService } from "../../services/redis.service"
 import { PaymentData } from "../type/payment"
 import { ERROR } from "../type/response.type"
 import * as dotenv from "dotenv"
-import { OrderEntity } from "src/repositories/user/order.entity"
 import { StoreRepository } from "src/repositories/store/store.repository"
+import { RegisteredOrder } from "../type/order.type"
 
 dotenv.config()
 const impKey = process.env.IMP_KEY
@@ -21,13 +21,13 @@ export namespace PortOneMethod {
         redis: RedisService,
         repository: StoreRepository,
     }) : Promise<boolean> => {
-        const order = await redis.get<OrderEntity>(order_uid, logPath)
+        const order = await redis.get<RegisteredOrder>(order_uid, logPath)
         if(!order) {
             var err = ERROR.NotFoundData
             err.substatus = "OrderLookupFailed"
             throw order
         }
-
+        await redis.set(order_uid, { ...order, state: "accept" } as RegisteredOrder, logPath)
         return !!(await repository.createOrder(order))
     }
 

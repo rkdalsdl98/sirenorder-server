@@ -1,3 +1,5 @@
+import { OrderEntity } from "src/repositories/user/order.entity"
+
 export type MenuInfo = {
     readonly name: string
     readonly price: number
@@ -23,3 +25,8 @@ export type RefuseOrder = {
     readonly imp_uid: string
     readonly reason: string
 }
+
+type NestedType<T> = {
+    [Key in keyof T]: T[Key]
+}
+export type RegisteredOrder = NestedType<OrderEntity & { readonly state: OrderState }>

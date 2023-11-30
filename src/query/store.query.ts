@@ -12,6 +12,9 @@ export namespace StoreQuery {
         readonly deliveryinfo: DeliveryInfo
         readonly menus: MenuInfo[]
     }
+    export interface StoreQueryGetOrderStateOptions {
+        readonly order_uid: string
+    }
 }
 
 export namespace PortOneRequest {
