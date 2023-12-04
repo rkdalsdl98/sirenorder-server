@@ -9,6 +9,9 @@ import { ConfigService } from "@nestjs/config";
         JwtService,
         ConfigService,
     ],
-    exports: [JwtFactory]
+    exports: [
+        JwtFactory,
+        JwtService,
+    ]
 })
 export class JwtModule {}

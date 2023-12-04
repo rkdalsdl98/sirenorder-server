@@ -1,5 +1,6 @@
 import { TypedParam, TypedQuery, TypedRoute } from "@nestia/core";
 import { Controller } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { ERROR, TryCatch } from "src/common/type/response.type";
 import { MenuDto } from "src/dto/menu.dto";
 import { MenuDetailDto } from "src/dto/menudetail.dto";
@@ -7,6 +8,7 @@ import { MenuQuery } from "src/query/menu.query";
 import { MenuService } from "src/services/menu.service";
 
 @Controller('menu')
+@ApiTags("메뉴")
 export class MenuController {
     constructor(
         private readonly meunService: MenuService

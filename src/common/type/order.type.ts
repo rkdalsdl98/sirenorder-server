@@ -29,4 +29,9 @@ export type RefuseOrder = {
 type NestedType<T> = {
     [Key in keyof T]: T[Key]
 }
-export type RegisteredOrder = NestedType<OrderEntity & { readonly state: OrderState }>
+export type RegisteredOrder = 
+NestedType<OrderEntity 
+& { 
+    readonly state: OrderState
+    readonly buyer_email: string
+}>

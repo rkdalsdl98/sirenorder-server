@@ -4,7 +4,9 @@ import { PaymentData } from "../type/payment"
 import { ERROR } from "../type/response.type"
 import * as dotenv from "dotenv"
 import { StoreRepository } from "src/repositories/store/store.repository"
-import { RegisteredOrder } from "../type/order.type"
+import { OrderState, RegisteredOrder } from "../type/order.type"
+import { RoomJoinOptions } from "../type/socket.type"
+import { UserEntity } from "src/repositories/user/user.entity"
 
 dotenv.config()
 const impKey = process.env.IMP_KEY
@@ -12,6 +14,33 @@ const impSecret = process.env.IMP_SECRET
 const logPath = "PortOneMethod"
 
 export namespace PortOneMethod {
+    export const setOrderState = async ({
+        order_uid,
+        state,
+        redis,
+        ttl,
+    }: {
+        order_uid: string,
+        state: OrderState,
+        redis: RedisService,
+        ttl?: number,
+    }) : Promise<RegisteredOrder> => {
+        const order = await redis.get<RegisteredOrder>(order_uid, logPath)
+        if(!order) {
+            var err = ERROR.NotFoundData
+            err.substatus = "OrderLookupFailed"
+            throw order
+        }
+        await redis.set(
+            order_uid, 
+            { ...order, state } as RegisteredOrder, 
+            logPath,
+            ttl,
+        )
+
+        return order;
+    }
+
     export const acceptOrder = async ({
         order_uid,
         redis,
@@ -21,14 +50,56 @@ export namespace PortOneMethod {
         redis: RedisService,
         repository: StoreRepository,
     }) : Promise<boolean> => {
-        const order = await redis.get<RegisteredOrder>(order_uid, logPath)
-        if(!order) {
-            var err = ERROR.NotFoundData
-            err.substatus = "OrderLookupFailed"
-            throw order
-        }
-        await redis.set(order_uid, { ...order, state: "accept" } as RegisteredOrder, logPath)
+        const order = await setOrderState({
+            order_uid,
+            redis,
+            state: "accept",
+        })
         return !!(await repository.createOrder(order))
+    }
+
+    export const finishOrder = async ({
+        order_uid,
+        redis,
+        repository,
+    }: {
+        order_uid: string,
+        redis: RedisService,
+        repository: StoreRepository,
+    }) : Promise<boolean> => { 
+        const order = await setOrderState({
+            order_uid,
+            redis,
+            state: "finish",
+            ttl: 300,
+        })
+
+        const store : RoomJoinOptions | null | undefined = await redis.get<RoomJoinOptions[]>(
+            "stores",
+            logPath,
+        ).then(res => {
+            if(res === null) return null
+            return res.find(s => s.storeId === order.store_uid)
+        })
+        if(store === null || store === undefined) throw ERROR.Accepted
+        
+        const user : UserEntity | null | undefined = await redis.get<UserEntity[]>("users", logPath)
+        .then(res => {
+            if(res === null) return null
+            return res.find(u => u.email === order.buyer_email)
+        })
+        if(user === null || user === undefined) throw ERROR.Accepted
+        const result = await repository.addOrderHistory(order.buyer_email, {
+            imp_uid: order.imp_uid,
+            menus: order.menus,
+            saleprice: order.saleprice,
+            store_name: store.storename,
+            store_thumbnail: store.thumbnail,
+            store_uid: store.storeId,
+            totalprice: order.totalprice,
+        })
+        
+        return result
     }
 
     export const refuseOrderById = async ({
@@ -39,8 +110,13 @@ export namespace PortOneMethod {
         redis: RedisService,
         order_uid: string,
         reason: string, 
-    }) => {
-        return await redis.delete(order_uid, logPath)
+    }) : Promise<boolean> => {
+        return !!(await setOrderState({
+            order_uid,
+            redis,
+            state: "refuse",
+            ttl: 300,
+        }))
     }
 
     export const refuseOrder = async ({
@@ -56,7 +132,7 @@ export namespace PortOneMethod {
         const paymentData = await _getPaymentData(imp_uid, token)
 
         if(paymentData.cancel_amount <= 0) {
-            return false
+            return false // 취소가능 금액이 0원 이하일 경우 처리
         }
 
         const result = await fetch("https://api.iamport.kr/payments/cancel", {

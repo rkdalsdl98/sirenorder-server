@@ -48,12 +48,47 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
         return { message: 'pong' }
     }
 
+    @SubscribeMessage('finish-order')
+    async handleFinishOrder(
+        @MessageBody() data: string
+    ) : Promise<SocketResponse<
+    any,
+    | typeof ERROR.ServerDatabaseError
+    | typeof ERROR.ServerCacheError
+    | typeof ERROR.NotFoundData>> {
+        try {
+            const result = await PortOneMethod.finishOrder({
+                order_uid: data,
+                redis: this.redis,
+                repository: this.storeRepository,
+            })
+            return {
+                result,
+                message: result ? "finish" : "fail",
+            }
+        } catch(e) {
+            await PortOneMethod.refuseOrderById({
+                redis: this.redis,
+                reason: "네트워크 통신이 원활하지 않아 주문이 취소 되었습니다.",
+                order_uid: data,
+            })
+            await this.storeRepository.deleteOrder(data)
+            return {
+                result: false,
+                message: "fail",
+                data: e,
+            }
+        }
+    }
+
+
     @SubscribeMessage('accept-order')
     async handleAccpetOrder(
         @MessageBody() data: string
     ) : Promise<SocketResponse<
     any,
     | typeof ERROR.ServerDatabaseError
+    | typeof ERROR.ServerCacheError
     | typeof ERROR.NotFoundData>> {
         try {
             const result = await PortOneMethod.acceptOrder({
@@ -64,9 +99,14 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
             
             return {
                 result,
-                message: "accept",
+                message: result ? "accept" : "fail",
             }
         } catch(e) {
+            await PortOneMethod.refuseOrderById({
+                redis: this.redis,
+                reason: "네트워크 통신이 원활하지 않아 주문이 취소 되었습니다.",
+                order_uid: data,
+            })
             await this.storeRepository.deleteOrder(data)
             return {
                 result: false,
@@ -82,6 +122,7 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     ) : Promise<SocketResponse<
     any, 
     | typeof ERROR.ServerDatabaseError
+    | typeof ERROR.ServerCacheError
     | typeof ERROR.NotFoundData
     >> {
         try {
@@ -90,14 +131,14 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
             //     imp_uid: data.imp_uid,
             //     redis: this.redis
             // })
-            await PortOneMethod.refuseOrderById({
+            const result = await PortOneMethod.refuseOrderById({
                 redis: this.redis,
                 reason: data.reason,
                 order_uid: data.uuid,
             })
             return {
-                result: true,
-                message: "refuse",
+                result,
+                message: result ? "refuse" : "fail",
             }
         } catch(e) {
             return {

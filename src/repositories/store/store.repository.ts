@@ -7,6 +7,7 @@ import { StoreDetailEntity, WeeklyHours } from "./storedetail.entity";
 import { OrderEntity } from "../user/order.entity";
 import { MenuInfo } from "src/common/type/order.type";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { OrderHistory, UserEntity } from "../user/user.entity";
 
 @Injectable()
 export class StoreRepository implements IRepository<StoreEntity, StoreDetailEntity>  {
@@ -30,6 +31,21 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
             Logger.error("데이터를 불러오는데 실패했습니다.", err.toString(), StoreRepository)
             throw ERROR.ServerDatabaseError
         })).map(o => this.parsingOrderEntity(o))
+    }
+
+    async addOrderHistory(buyer_email: string, history: OrderHistory)
+    : Promise<boolean> {
+        return !!(await this.prisma.user.update({
+            where: { email: buyer_email },
+            data: {
+                orderhistory: {
+                    push: { ...history }
+                }
+            }
+        }).catch(err => {
+            Logger.error("주문내역 업데이트에 실패했습니다.")
+            throw ERROR.ServerDatabaseError
+        }))
     }
 
     async getMany(): Promise<StoreEntity[]> {

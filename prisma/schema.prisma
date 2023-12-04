@@ -20,7 +20,7 @@ model user {
   tel String @default("000-0000-0000")
   wallet wallet? @relation("UserWallet")
   gifts gift[] @relation("Gift")
-  coupons String[]
+  coupons Json[]
   orderhistory Json[]
   accesstoken String?
   refreshtoken String?

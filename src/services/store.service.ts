@@ -6,8 +6,6 @@ import { StoreEntity } from "src/repositories/store/store.entity";
 import { RoomJoinOptions } from "src/common/type/socket.type";
 import { SocketGateWay } from "src/common/socket/socket.gateway";
 import { OrderEntity } from "src/repositories/user/order.entity";
-import { AuthService } from "./auth.service";
-import { ConfigService } from "@nestjs/config";
 import { ERROR } from "src/common/type/response.type";
 import { OrderDto } from "src/dto/user.dto";
 import { PortOneMethod } from "src/common/methods/portone.method";
@@ -19,8 +17,6 @@ export class StoreService {
         private readonly storeRepository: StoreRepository,
         private readonly redis: RedisService,
         private readonly socket: SocketGateWay,
-        private readonly auth: AuthService,
-        private readonly config: ConfigService,
     ){
         this._initialized()
     }
@@ -78,6 +74,7 @@ export class StoreService {
                 deliveryinfo,
                 menus,
                 state: "wait",
+                buyer_email: order.buyer_email,
             } as RegisteredOrder
 
             await this.redis.set(orderEntity.uuid, orderEntity, StoreService.name)

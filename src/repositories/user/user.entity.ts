@@ -28,4 +28,8 @@ NestiedType<Omit<OrderEntity,
 | "uuid" 
 | "merchant_uid"
 | "deliveryinfo"
-> & { store_uid: string }>
+> & { 
+    store_uid: string, 
+    store_name: string,
+    store_thumbnail?: string,
+}>
