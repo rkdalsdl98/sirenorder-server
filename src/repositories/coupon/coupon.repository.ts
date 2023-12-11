@@ -5,6 +5,7 @@ import { PrismaService } from "src/services/prisma.service";
 import { ERROR } from "src/common/type/response.type";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { Prisma } from "@prisma/client";
+import { GiftInfo } from "src/common/type/gift.type";
 
 @Injectable()
 export class CouponRepository implements IRepository<CouponEntity, unknown> {
@@ -23,14 +24,15 @@ export class CouponRepository implements IRepository<CouponEntity, unknown> {
                         throw ERROR.NotFoundData
                 }
             }
-            Logger.error("쿠폰조회에 실패했습니다.")
+            Logger.error("쿠폰조회에 실패했습니다.", CouponRepository.name)
             throw ERROR.ServerDatabaseError
         }))
     }
 
     async publishCoupon(args: {
         current_user_email: string, 
-        coupon: CouponEntity
+        coupon: CouponEntity,
+        coupon_code: string,
     }) {
         return await this.prisma.$transaction(async tx => {
             const coupon = this.parsingEntity(await tx.coupon.create({
@@ -41,7 +43,7 @@ export class CouponRepository implements IRepository<CouponEntity, unknown> {
                 },
             })
             .catch(err => {
-                Logger.error("쿠폰등록에 실패했습니다.")
+                Logger.error("쿠폰등록에 실패했습니다.", CouponRepository.name)
                 throw ERROR.ServerDatabaseError
             }))
 
@@ -50,7 +52,7 @@ export class CouponRepository implements IRepository<CouponEntity, unknown> {
                 data: {
                     coupons: {
                         push: {
-                            code: coupon.code,
+                            code: args.coupon_code,
                             expiration_period: args.coupon.expiration_period,
                             menu_name: coupon.menuinfo.name,
                             thumbnail: coupon.menuinfo.thumbnail,
@@ -59,7 +61,7 @@ export class CouponRepository implements IRepository<CouponEntity, unknown> {
                 }
             })
             .catch(err => {
-                Logger.error("사용자의 쿠폰정보 업데이트를 실패했습니다.")
+                Logger.error("사용자의 쿠폰정보 업데이트를 실패했습니다.", CouponRepository.name)
                 throw ERROR.ServerDatabaseError
             })
 
@@ -67,17 +69,101 @@ export class CouponRepository implements IRepository<CouponEntity, unknown> {
         })
     }
 
-    async deleteCoupon(current_user_email: string, code: string)
-    : Promise<boolean> {
+    async updateGift(args: {
+        uuid: string,
+        gift: GiftInfo,
+        coupon: SimpleCouponEntity,
+    }) : Promise<void> {
+        await this.prisma.user.update({
+            where: { email: args.gift.to },
+            data: {
+                gifts: {
+                    create: {
+                        coupon: { ...args.coupon },
+                        from: args.gift.from,
+                        to: args.gift.to,
+                        message: args.gift.message,
+                        wrappingtype: args.gift.wrappingtype,
+                        uuid: args.uuid,
+                        menu: args.gift.menu,
+                        imp_uid: args.gift.imp_uid,
+                        order_uid: args.gift.order_uid,
+                    }
+                }
+            }
+        })
+        .catch(err => {
+            if(err instanceof PrismaClientKnownRequestError) {
+                switch(err.code) {
+                    case "P2025":
+                        throw ERROR.NotFoundData
+                }
+            }
+            Logger.error("선물정보 업데이트중 오류가 발생했습니다.", CouponRepository.name)
+            throw ERROR.ServerDatabaseError
+        })
+    }
+
+    async deleteGiftCoupon(
+        current_user_email: string,
+        encryption_code: string,
+        gift_uid: string,
+    ) {
         return await this.prisma.$transaction(async tx => {
             const deleteCoupon = await tx.coupon
-            .delete({ where: { code } })
+            .delete({ where: { code: encryption_code } })
             .catch(err => {
-                Logger.error("쿠폰삭제에 실패했습니다.")
+                if(err instanceof PrismaClientKnownRequestError) {
+                    switch(err.code) {
+                        case "P2025":
+                            throw ERROR.NotFoundData
+                    }
+                }
+                Logger.error("쿠폰삭제에 실패했습니다.", CouponRepository.name)
                 throw ERROR.ServerDatabaseError
             })
-            if(!deleteCoupon) return false
-            
+
+            await tx.user.update({
+                where: { email: current_user_email },
+                data: {
+                    gifts: { delete: { uuid: gift_uid } }
+                }
+            })
+            .catch(err => {
+                if(err instanceof PrismaClientKnownRequestError) {
+                    switch(err.code) {
+                        case "P2025":
+                            throw ERROR.NotFoundData
+                    }
+                }
+                Logger.error("사용자의 쿠폰폐기를 싪패했습니다.", CouponRepository.name)
+                throw ERROR.ServerDatabaseError
+            })
+
+            return this.parsingEntity(deleteCoupon)
+        })
+    }
+
+    async deleteCoupon(
+        current_user_email: string, 
+        code: string,
+        encryption_code: string,
+    )
+    : Promise<CouponEntity> {
+        return await this.prisma.$transaction(async tx => {
+            const deleteCoupon = await tx.coupon
+            .delete({ where: { code: encryption_code } })
+            .catch(err => {
+                if(err instanceof PrismaClientKnownRequestError) {
+                    switch(err.code) {
+                        case "P2025":
+                            throw ERROR.NotFoundData
+                    }
+                }
+                Logger.error("쿠폰삭제에 실패했습니다.", CouponRepository.name)
+                throw ERROR.ServerDatabaseError
+            })
+
             const findOwner = await tx.user.findFirst({
                 where: { email: current_user_email }
             })
@@ -91,21 +177,15 @@ export class CouponRepository implements IRepository<CouponEntity, unknown> {
                     data: { coupons }
                 })
                 .catch(err => {
-                    Logger.error("사용자의 쿠폰폐기를 싪패했습니다.")
+                    Logger.error("사용자의 쿠폰폐기를 싪패했습니다.", CouponRepository.name)
                     throw ERROR.ServerDatabaseError
                 })
             }
             
-            return true
+            return this.parsingEntity(deleteCoupon)
         })
         .catch(err => {
-            if(err instanceof PrismaClientKnownRequestError) {
-                switch(err.code) {
-                    case "P2025":
-                        throw ERROR.NotFoundData
-                }
-            }
-            Logger.error("트랜잭션 수행중 오류가 발생했습니다.")
+            Logger.error("트랜잭션 수행중 오류가 발생했습니다.", CouponRepository.name)
             throw err
         })
     }

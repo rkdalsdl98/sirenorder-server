@@ -5,7 +5,7 @@ import { EmailService } from "./mail.service";
 import { AuthService } from "./auth.service";
 import { ConfigService } from "@nestjs/config";
 import { ERROR } from "../common/type/response.type";
-import { UserEntity } from "../repositories/user/user.entity";
+import { OrderHistory, UserEntity } from "../repositories/user/user.entity";
 import { UserDto } from "src/dto/user.dto";
 
 @Injectable()
@@ -22,7 +22,7 @@ export class UserService {
 
     private async _initialized() :
     Promise<void> {
-        const users = await this.userRepository.getMany()
+        const users = (await this.userRepository.getMany())
         await this.redis.set("users", users, UserService.name)
         .then(_=> Logger.log("유저정보 인 메모리 캐싱"))
         .catch(err => {
@@ -131,7 +131,18 @@ export class UserService {
             }, findUser.email)
 
             await this._upsertCache(user)
-            return { ...user } as UserDto
+            return { 
+                tel: user.tel,
+                email: user.email,
+                nickname: user.nickname,
+                wallet: user.wallet,
+                gifts: user.gifts,
+                coupons: user.coupons,
+                orderhistory: user.orderhistory,
+                createdAt: user.createdAt,
+                updatedAt: user.updatedAt,
+                accesstoken: user.accesstoken,
+            } as UserDto
         }
         var error = ERROR.UnAuthorized
         error.substatus = "NotEqualPass"
@@ -193,6 +204,11 @@ export class UserService {
             error.substatus = "ForgeryData"
             throw error
         }
+    }
+
+    async getOrderHistory(email: string) 
+    : Promise<OrderHistory[]> {
+        return await this.userRepository.getOrderHistory(email)
     }
 
     async deleteUser(email: string) {

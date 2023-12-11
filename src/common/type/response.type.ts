@@ -7,6 +7,7 @@ export type SubStatus =
 | "Duplicated"
 | "UnAuthorzied"
 | "OrderLookupFailed"
+| "ExpiredCoupon"
 
 export type SuccessResponse<T> = {
     readonly data: T

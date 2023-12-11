@@ -7,23 +7,22 @@ import { ERROR } from "../../common/type/response.type";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { WalletEntity } from "./wallet.entity";
 import { GiftEntity } from "./gift.entity";
+import { SimpleCouponEntity } from "../coupon/coupon.entity";
 
 @Injectable()
 export class UserRepository implements IRepository<UserEntity, undefined> {
     constructor(
         private readonly prisma: PrismaService
     ){}
-
-    /**
-     * 쿼리 실행 결과값을 순서대로 정렬되어 배열로 반환
-     * @param querys
-     * @returns [...query results]
-     */
-    async transaction(querys: []) : Promise<[]> {
-        return await this.prisma.$transaction(querys)
-        .catch(err => {
-            Logger.error("트랙잭션중 오류가 발생했습니다.", err.toString(), UserRepository)
-            throw ERROR.ServerDatabaseError
+    
+    async test() {
+        await this.prisma.user.update({
+            where: { email: "rkdalsdl112@gmail.com" },
+            data: {
+                gifts: {
+                    deleteMany: {}
+                }
+            }
         })
     }
 
@@ -74,6 +73,23 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
             Logger.error("데이터를 불러오는데 실패했습니다.", err.toString(), UserRepository)
             throw ERROR.ServerDatabaseError
         }))
+    }
+
+    async getOrderHistory(email: string)
+    : Promise<OrderHistory[]> {
+        const result = await this.prisma.user.findFirst({
+            where: { email },
+            select: {
+                orderhistory: true,
+            }
+        })
+        if(!result) {
+            throw ERROR.NotFoundData
+        }
+
+        return result
+        .orderhistory
+        .map(h => this.parsingHistoryEntity(h))
     }
     
     async create(args: { 
@@ -160,6 +176,19 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
         }))
     }
 
+    parsingHistoryEntity(e) {
+        if(!e) throw ERROR.NotFoundData
+        return {
+            imp_uid: e.imp_uid,
+            menus: e.menus,
+            saleprice: e.saleprice,
+            store_name: e.store_name,
+            store_uid: e.store_uid,
+            store_thumbnail: e.store_thumbnail,
+            totalprice: e.totalprice,
+        } as OrderHistory
+    }
+
     parsingEntity(e) : UserEntity {
         if(!e) throw ERROR.NotFoundData
         return {
@@ -170,10 +199,24 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
             pass: e.pass,
             salt: e.salt,
             wallet: e.wallet as Omit<WalletEntity, "user_uid">,
-            gifts: [...e.gifts.map(g => ({ ...g } as GiftEntity))],
-            coupons: e.coupons,
+            gifts: e.gifts.map(g => ({
+                ...g,
+                coupon: {
+                    code: g.coupon.code,
+                    expiration_period: new Date(g.coupon.expiration_period),
+                    menu_name: g.coupon.menu_name,
+                    thumbnail: g.coupon.thumbnail,
+                } as SimpleCouponEntity,
+            } as GiftEntity)),
+            coupons: e.coupons.map(c => ({
+                code: c.code,
+                expiration_period: new Date(c.expiration_period),
+                menu_name: c.menu_name,
+                thumbnail: c.thumbnail,
+            } as SimpleCouponEntity)),
             orderhistory: Object.keys(e.orderhistory).map(key => {
                 return {
+                    imp_uid: e.orderhistory[key]["imp_uid"],
                     saleprice: e.orderhistory[key]["saleprice"],
                     totalprice: e.orderhistory[key]["totalprice"],
                     menus: e.orderhistory[key]["menus"].map(m => m as MenuInfo),

@@ -7,7 +7,7 @@ import { StoreDetailEntity, WeeklyHours } from "./storedetail.entity";
 import { OrderEntity } from "../user/order.entity";
 import { MenuInfo } from "src/common/type/order.type";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
-import { OrderHistory, UserEntity } from "../user/user.entity";
+import { OrderHistory } from "../user/user.entity";
 
 @Injectable()
 export class StoreRepository implements IRepository<StoreEntity, StoreDetailEntity>  {
@@ -59,20 +59,43 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
 
     async createOrder(order: OrderEntity)
     : Promise<OrderEntity> {
-        return this.parsingOrderEntity(await this.prisma.order.create({
-            data: {
-                store_uid: order.store_uid,
-                imp_uid: order.imp_uid,
-                uuid: order.uuid,
-                deliveryinfo: order.deliveryinfo,
-                menus: order.menus,
-                saleprice: order.saleprice,
-                totalprice: order.totalprice,
-            }
-        }).catch(err => {
-            Logger.error("데이터를 갱신하는데 실패했습니다.", err.toString(), StoreRepository)
-            throw ERROR.ServerDatabaseError
-        }))
+        return await this.prisma.$transaction<OrderEntity>(async tx => {
+            const createdOrder = this.parsingOrderEntity(await tx.order.create({
+                data: {
+                    store_uid: order.store_uid,
+                    imp_uid: order.imp_uid,
+                    uuid: order.uuid,
+                    deliveryinfo: order.deliveryinfo,
+                    menus: order.menus,
+                    saleprice: order.saleprice,
+                    totalprice: order.totalprice,
+                }
+            }).catch(err => {
+                Logger.error("데이터를 갱신하는데 실패했습니다.", err.toString(), StoreRepository)
+                throw ERROR.ServerDatabaseError
+            }))
+
+            await tx.store.update({
+                where: { uuid: order.store_uid },
+                data: {
+                    wallet: {
+                        update: {
+                            sales: {
+                                create: {
+                                    amounts: order.totalprice,
+                                    menus: order.menus,
+                                }
+                            }
+                        }
+                    }
+                }
+            }).catch(async err => {
+                await this.deleteOrder(order.uuid)
+                Logger.error("가게 주문내역 갱신을 실패했습니다.", err.toString(), StoreRepository)
+                throw ERROR.ServerDatabaseError
+            })
+            return createdOrder
+        })
     }
 
     async deleteOrder(orderId: string): Promise<OrderEntity> {

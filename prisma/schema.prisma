@@ -38,9 +38,13 @@ model wallet {
 
 model gift {
   uuid String @id
-  coupon String
+  message String
+  coupon Json
   to String
   from String
+  menu Json
+  imp_uid String
+  order_uid String
   wrappingtype String @default("default")
   user user @relation("Gift", references: [email], fields: [user_email], onDelete: Cascade)
   user_email String
@@ -109,7 +113,7 @@ model sales {
   id Int @id @default(autoincrement())
   amounts Int @default(0)
   menus Json[]
-  salesdate String
+  salesdate DateTime @default(now())
   currwallet storewallet @relation("Sales", references: [uuid], fields: [wallet_uid], onDelete: Cascade)
   wallet_uid String @unique
 }

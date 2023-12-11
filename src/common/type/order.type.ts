@@ -1,4 +1,4 @@
-import { OrderEntity } from "src/repositories/user/order.entity"
+import { DeliveryInfo, OrderEntity } from "src/repositories/user/order.entity"
 
 export type MenuInfo = {
     readonly name: string
@@ -35,3 +35,8 @@ NestedType<OrderEntity
     readonly state: OrderState
     readonly buyer_email: string
 }>
+
+export type OrderInfo = {
+    readonly menus: MenuInfo[]
+    readonly deliveryinfo: DeliveryInfo
+}

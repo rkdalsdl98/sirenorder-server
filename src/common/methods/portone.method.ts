@@ -4,7 +4,7 @@ import { PaymentData } from "../type/payment"
 import { ERROR } from "../type/response.type"
 import * as dotenv from "dotenv"
 import { StoreRepository } from "src/repositories/store/store.repository"
-import { OrderState, RegisteredOrder } from "../type/order.type"
+import { RegisteredOrder } from "../type/order.type"
 import { RoomJoinOptions } from "../type/socket.type"
 import { UserEntity } from "src/repositories/user/user.entity"
 
@@ -14,16 +14,12 @@ const impSecret = process.env.IMP_SECRET
 const logPath = "PortOneMethod"
 
 export namespace PortOneMethod {
-    export const setOrderState = async ({
+    export const findOrderByUUID = async ({
         order_uid,
-        state,
         redis,
-        ttl,
     }: {
         order_uid: string,
-        state: OrderState,
         redis: RedisService,
-        ttl?: number,
     }) : Promise<RegisteredOrder> => {
         const order = await redis.get<RegisteredOrder>(order_uid, logPath)
         if(!order) {
@@ -31,12 +27,6 @@ export namespace PortOneMethod {
             err.substatus = "OrderLookupFailed"
             throw order
         }
-        await redis.set(
-            order_uid, 
-            { ...order, state } as RegisteredOrder, 
-            logPath,
-            ttl,
-        )
 
         return order;
     }
@@ -49,13 +39,13 @@ export namespace PortOneMethod {
         order_uid: string,
         redis: RedisService,
         repository: StoreRepository,
-    }) : Promise<boolean> => {
-        const order = await setOrderState({
+    }) : Promise<string> => {
+        const order = await findOrderByUUID({
             order_uid,
             redis,
-            state: "accept",
         })
-        return !!(await repository.createOrder(order))
+        await repository.createOrder(order)
+        return order.buyer_email
     }
 
     export const finishOrder = async ({
@@ -66,13 +56,14 @@ export namespace PortOneMethod {
         order_uid: string,
         redis: RedisService,
         repository: StoreRepository,
-    }) : Promise<boolean> => { 
-        const order = await setOrderState({
+    }) : Promise<string> => { 
+        const order = await findOrderByUUID({
             order_uid,
             redis,
-            state: "finish",
-            ttl: 300,
-        })
+        }).then(async res => {
+            await removeOrderById({order_uid, redis})
+            return res
+        }) 
 
         const store : RoomJoinOptions | null | undefined = await redis.get<RoomJoinOptions[]>(
             "stores",
@@ -89,7 +80,7 @@ export namespace PortOneMethod {
             return res.find(u => u.email === order.buyer_email)
         })
         if(user === null || user === undefined) throw ERROR.Accepted
-        const result = await repository.addOrderHistory(order.buyer_email, {
+        await repository.addOrderHistory(order.buyer_email, {
             imp_uid: order.imp_uid,
             menus: order.menus,
             saleprice: order.saleprice,
@@ -99,24 +90,22 @@ export namespace PortOneMethod {
             totalprice: order.totalprice,
         })
         
-        return result
+        return order.buyer_email
     }
 
-    export const refuseOrderById = async ({
+    export const removeOrderById = async ({
         redis,
         order_uid,
-        reason,
     } : {
         redis: RedisService,
         order_uid: string,
-        reason: string, 
-    }) : Promise<boolean> => {
-        return !!(await setOrderState({
+    }) : Promise<string> => {
+        const order = await findOrderByUUID({
             order_uid,
             redis,
-            state: "refuse",
-            ttl: 300,
-        }))
+        })
+        await redis.delete(order_uid, logPath)
+        return order.buyer_email
     }
 
     export const refuseOrder = async ({

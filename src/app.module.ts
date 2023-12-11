@@ -6,6 +6,7 @@ import { UserModule } from './modules/user.module';
 import { AuthModule } from './modules/auth.module';
 import { MenuModule } from './modules/menu.module';
 import { StoreModule } from './modules/store.module';
+import { SSEModule } from './modules/sse.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { StoreModule } from './modules/store.module';
     AuthModule,
     MenuModule,
     StoreModule,
+    SSEModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),

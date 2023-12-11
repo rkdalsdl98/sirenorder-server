@@ -22,7 +22,9 @@ import { StoreWalletEntity } from "src/repositories/store/storewallet.entity";
 import { OrderEntity } from "src/repositories/user/order.entity";
 import { StoreRepository } from "src/repositories/store/store.repository";
 import { PortOneMethod } from "../methods/portone.method";
-import { RefuseOrder } from "../type/order.type";
+import { OrderState, RefuseOrder } from "../type/order.type";
+import { SSEService } from "src/services/sse.service";
+import { OrderNotifySubject } from "../type/sse.type";
 
 dotenv.config()
 const port : number = parseInt(process.env.SOCKET_PORT ?? "3001")
@@ -38,6 +40,7 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
         private readonly storeRepository: StoreRepository,
         private readonly auth: AuthService,
         private readonly redis: RedisService,
+        private readonly sseService: SSEService,
     ){}
 
     @WebSocketServer() private readonly server: Server;
@@ -57,19 +60,19 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     | typeof ERROR.ServerCacheError
     | typeof ERROR.NotFoundData>> {
         try {
-            const result = await PortOneMethod.finishOrder({
+            const buyer_email = await PortOneMethod.finishOrder({
                 order_uid: data,
                 redis: this.redis,
                 repository: this.storeRepository,
             })
+            this.pushStateMessage(buyer_email, "finish")
             return {
-                result,
-                message: result ? "finish" : "fail",
+                result: true,
+                message:"finish",
             }
         } catch(e) {
-            await PortOneMethod.refuseOrderById({
+            await PortOneMethod.removeOrderById({
                 redis: this.redis,
-                reason: "네트워크 통신이 원활하지 않아 주문이 취소 되었습니다.",
                 order_uid: data,
             })
             await this.storeRepository.deleteOrder(data)
@@ -91,20 +94,19 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     | typeof ERROR.ServerCacheError
     | typeof ERROR.NotFoundData>> {
         try {
-            const result = await PortOneMethod.acceptOrder({
-                redis: this.redis,
+            const buyer_email = await PortOneMethod.acceptOrder({
                 order_uid: data,
+                redis: this.redis,
                 repository: this.storeRepository,
             })
-            
+            this.pushStateMessage(buyer_email, "accept")
             return {
-                result,
-                message: result ? "accept" : "fail",
+                result: true,
+                message: "accept",
             }
         } catch(e) {
-            await PortOneMethod.refuseOrderById({
+            await PortOneMethod.removeOrderById({
                 redis: this.redis,
-                reason: "네트워크 통신이 원활하지 않아 주문이 취소 되었습니다.",
                 order_uid: data,
             })
             await this.storeRepository.deleteOrder(data)
@@ -131,14 +133,14 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
             //     imp_uid: data.imp_uid,
             //     redis: this.redis
             // })
-            const result = await PortOneMethod.refuseOrderById({
+            const buyer_email = await PortOneMethod.removeOrderById({
                 redis: this.redis,
-                reason: data.reason,
                 order_uid: data.uuid,
             })
+            this.pushStateMessage(buyer_email, "refuse")
             return {
-                result,
-                message: result ? "refuse" : "fail",
+                result: true,
+                message: "refuse",
             }
         } catch(e) {
             return {
@@ -193,6 +195,19 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
                 error: e,
             })
         }
+    }
+
+    pushStateMessage(
+        buyer_email: string, 
+        order_state: OrderState,
+    ) {
+        this.sseService.pushMessage({
+            notify_type: "order-notify",
+            subject: {
+                order_state,
+                receiver_email: buyer_email,
+            } as OrderNotifySubject
+        })
     }
 
     sendOrder(socketId: string, order: OrderEntity)

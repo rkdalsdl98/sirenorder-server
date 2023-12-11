@@ -1,3 +1,4 @@
+import { SimpleCouponEntity } from "../coupon/coupon.entity"
 import { GiftEntity } from "./gift.entity"
 import { OrderEntity } from "./order.entity"
 import { WalletEntity } from "./wallet.entity"
@@ -11,7 +12,7 @@ export interface UserEntity {
     readonly salt: string
     readonly wallet: WalletEntity | null
     readonly gifts: GiftEntity[]
-    readonly coupons: string[]
+    readonly coupons: SimpleCouponEntity[]
     readonly orderhistory: OrderHistory[]
     readonly accesstoken: string | null,
     readonly refreshtoken: string | null,

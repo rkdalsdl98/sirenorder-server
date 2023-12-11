@@ -1,5 +1,5 @@
 import { TypedBody, TypedParam, TypedQuery, TypedRoute } from "@nestia/core";
-import { Controller, Query } from "@nestjs/common";
+import { Controller, Logger, Query } from "@nestjs/common";
 import { ERROR, TryCatch } from "../common/type/response.type";
 import { StoreDetailDto, StoreDto } from "../dto/store.dto";
 import { StoreService } from "../services/store.service";
@@ -81,15 +81,17 @@ export class StoreController {
     @TypedRoute.Post("order/payment/webhook")
     async handlePaymentWebhook(
         @TypedBody() body: PortOneRequest.PortOneRequestBody
-    ) {
+    ) : Promise<number> {
         try {
-            await this.storeService.sendOrder({
+            await this.storeService.paymentFactory({
                 imp_uid: body.imp_uid,
                 order_uid: body.merchant_uid,
                 status: body.status,
             })
             return 201
         } catch(e) {
+            Logger.error("결제처리중 오류가 발생했습니다.", StoreController.name)
+            Logger.error(e)
             return 400
         }
     }

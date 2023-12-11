@@ -6,11 +6,13 @@ import { RedisService } from "src/services/redis.service";
 import { StoreRepository } from "src/repositories/store/store.repository";
 import { JwtModule } from "./jwt.module";
 import { AuthModule } from "./auth.module";
+import { SSEModule } from "./sse.module";
 
 @Module({
     imports: [
         JwtModule,
-        AuthModule
+        AuthModule,
+        SSEModule,
     ],
     providers: [
         SocketGateWay,

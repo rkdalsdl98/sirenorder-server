@@ -9,12 +9,15 @@ import { OrderEntity } from "src/repositories/user/order.entity";
 import { ERROR } from "src/common/type/response.type";
 import { OrderDto } from "src/dto/user.dto";
 import { PortOneMethod } from "src/common/methods/portone.method";
-import { OrderState, RegisteredOrder } from "src/common/type/order.type";
+import { OrderInfo, OrderState, RegisteredOrder } from "src/common/type/order.type";
+import { CouponService } from "./coupon.service";
+import { GiftInfo } from "src/common/type/gift.type";
 
 @Injectable()
 export class StoreService {
     constructor(
         private readonly storeRepository: StoreRepository,
+        private readonly couponService: CouponService,
         private readonly redis: RedisService,
         private readonly socket: SocketGateWay,
     ){
@@ -34,37 +37,121 @@ export class StoreService {
         })
     }
 
+    async paymentFactory({
+        order_uid,
+        imp_uid,
+        status,
+    } : {
+        order_uid: string,
+        imp_uid: string,
+        status: string,
+    })
+    : Promise<void> {
+        const order: OrderDto = await PortOneMethod.findOrder(imp_uid)
+        let { type } = JSON.parse(order.custom_data)
+
+        const userUUIDs = { order_uid, imp_uid }
+        const portOneUUIDs = { order_uid: order.merchant_uid, imp_uid: order.imp_uid }
+        if(!this._equalUUIds(portOneUUIDs, userUUIDs)) {
+            this._refuseOrder(order_uid)
+            var err = ERROR.BadRequest
+            err.substatus = "ForgeryData"
+            throw err
+        }
+
+        switch(type) {
+            case "order":
+                await this.sendOrder({
+                    order_uid,
+                    imp_uid,
+                    order,
+                })
+                break
+            case "gift":
+                await this.sendGift({
+                    order_uid,
+                    imp_uid,
+                    order,
+                })
+                break
+        }
+    }
+
+    async useGift(
+        user_email: string, 
+        code: string, 
+        gift_uid: string
+    ) : Promise<boolean> {
+        // 선물받은 유저가 알 수 있는 루틴이 필요
+        return await this.couponService.useGiftCoupon(
+            user_email,
+            code,
+            gift_uid,
+        )
+    }
+
+    async sendGift({
+        order_uid,
+        imp_uid,
+        order,
+    } : {
+        order_uid: string,
+        imp_uid: string,
+        order: OrderDto,
+    }) 
+    : Promise<void> {
+        let { data } = JSON.parse(order.custom_data)
+        let { giftInfo } : { giftInfo : GiftInfo } = JSON.parse(data)
+
+        if(!giftInfo) {
+            this._refuseOrder(order_uid)
+            var err = ERROR.BadRequest
+            err.substatus = "ForgeryData"
+            throw err
+        }
+        const message = giftInfo.message ?? ""
+        await this.couponService.sendGift({
+            from: giftInfo.from,
+            to: giftInfo.to,
+            menu: giftInfo.menu,
+            wrappingtype: giftInfo.wrappingtype,
+            message: message,
+            imp_uid: imp_uid,
+            order_uid: order_uid,
+        } as GiftInfo)
+    }
+
     // 실패 구문마다 주문 취소 루틴을 넣어주자
     // 주문취소 루틴에 주문번호를 넣어 캐시데이터만 삭제처리 하도록 해두었음
     async sendOrder({
         order_uid,
         imp_uid,
-        status,
+        order,
+    } : {
+        order_uid: string,
+        imp_uid: string,
+        order: OrderDto,
     })
     : Promise<boolean> {
         let result = false
 
-        const order: OrderDto = await PortOneMethod.findOrder(imp_uid)
-        let { storeId, orderInfo } = JSON.parse(order.custom_data)
+        let { data } = JSON.parse(order.custom_data)
+        let { storeId, orderInfo } : { storeId: string, orderInfo: OrderInfo } = JSON.parse(data)
         const store = (await this.redis.get<RoomJoinOptions[]>("stores", StoreService.name))
         ?.find(s => s.storeId === storeId)
 
         if(store && store.isOpen && store.socketId) {
-            orderInfo = JSON.parse(orderInfo)
-            const userUUIDs = { order_uid, imp_uid }
-            const portOneUUIDs = { order_uid: order.merchant_uid, imp_uid: order.imp_uid }
-            const { menus, deliveryinfo } = orderInfo
-
-            if(!orderInfo || !this._equalUUIds(portOneUUIDs, userUUIDs)) {
+            if(!orderInfo) {
                 this._refuseOrder(order_uid)
                 var err = ERROR.BadRequest
                 err.substatus = "ForgeryData"
                 throw err
             } else if(!store.socketId) {
                 this._refuseOrder(order_uid)
-                throw ERROR.ServiceUnavailableException
+                throw ERROR.NotFound
             }
 
+            const { menus, deliveryinfo } = orderInfo
             const orderEntity = {
                 uuid: order.merchant_uid,
                 imp_uid: order.imp_uid,
@@ -139,8 +226,7 @@ export class StoreService {
         // })
             
         //if(!refused) Logger.error("주문삭제 실패", StoreService.name)
-        await PortOneMethod.refuseOrderById({
-            reason: "조리불가",
+        await PortOneMethod.removeOrderById({
             redis: this.redis,
             order_uid: uuid,
         })

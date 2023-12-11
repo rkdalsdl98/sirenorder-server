@@ -4,7 +4,7 @@ import { ApiTags } from "@nestjs/swagger";
 import { AuthDecorator } from "src/common/decorators/auth.decorator";
 import { CouponGuard } from "src/common/guards/coupon.guard";
 import { ERROR, FailedResponse, TryCatch } from "src/common/type/response.type";
-import { CouponBody } from "src/query/coupon.query";
+import { CouponBody, CouponQuery } from "src/query/coupon.query";
 import { SimpleCouponEntity } from "src/repositories/coupon/coupon.entity";
 import { CouponService } from "src/services/coupon.service";
 
@@ -14,6 +14,34 @@ export class CouponController {
     constructor(
         private readonly couponService: CouponService,
     ){}
+
+    @TypedRoute.Post()
+    async useCoupon(
+        @TypedQuery() query: CouponQuery.CouponQueryUseOptions,
+    ) 
+    : Promise<TryCatch<
+    boolean,
+    | typeof ERROR.ServerDatabaseError
+    | typeof ERROR.ServiceUnavailableException
+    >> {
+        try {
+            const result = await this.couponService.useCoupon(
+                query.user_email,
+                query.code,
+            )
+            return {
+                data: result,
+                status: 201,
+            }
+        } catch(e) { return e }
+    }
+
+    @TypedRoute.Post("gift")
+    async useGiftCoupon() {
+        try {
+            
+        } catch(e) { return e }
+    }
 
     @TypedRoute.Post("publish")
     @UseGuards(CouponGuard)
