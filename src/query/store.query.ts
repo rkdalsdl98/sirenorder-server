@@ -2,6 +2,9 @@ import { MenuInfo } from "src/common/type/order.type"
 import { DeliveryInfo } from "src/repositories/user/order.entity"
 
 export namespace StoreQuery {
+    export interface StoreQueryGetStoreDetailOptions {
+        readonly detailId: number
+    }
     export interface StoreQueryGetOrdersOptions {
         readonly storeId: string
     }

@@ -4,4 +4,7 @@ export namespace MenuQuery {
     export interface MenuQueryGetListOptions {
         readonly category?: Category
     }
+    export interface MenuQueryGetDetailOptions {
+        readonly detailId: number
+    }
 }

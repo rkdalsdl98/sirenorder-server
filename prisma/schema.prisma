@@ -122,7 +122,6 @@ model menu {
   id Int @id @default(autoincrement())
   name String
   en_name String
-  price Int @default(0)
   thumbnail String
   category String @default("notdefined")
   detail menudetail? @relation("MenuDetail")
@@ -130,6 +129,7 @@ model menu {
 
 model menudetail {
   id Int @id @default(autoincrement())
+  price Int @default(0)
   description String?
   allergys String[]
   menu menu @relation("MenuDetail", fields: [menu_id], references: [id], onDelete: Cascade)
@@ -140,6 +140,7 @@ model menudetail {
 model nutrition {
   id Int @id @default(autoincrement())
   size String
+  volume String
   calorie Decimal @default(0.0)
   carbohydrate Decimal @default(0.0)
   sugars Decimal @default(0.0)

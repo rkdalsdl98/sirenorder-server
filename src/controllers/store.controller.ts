@@ -1,5 +1,5 @@
-import { TypedBody, TypedParam, TypedQuery, TypedRoute } from "@nestia/core";
-import { Controller, Logger, Query } from "@nestjs/common";
+import { TypedBody, TypedQuery, TypedRoute } from "@nestia/core";
+import { Controller, Logger } from "@nestjs/common";
 import { ERROR, TryCatch } from "../common/type/response.type";
 import { StoreDetailDto, StoreDto } from "../dto/store.dto";
 import { StoreService } from "../services/store.service";
@@ -27,15 +27,15 @@ export class StoreController {
         } catch(e) { return e }
     }
 
-    @TypedRoute.Get("/:id")
+    @TypedRoute.Get("detail")
     async getStoreDetail(
-        @TypedParam("id") id: number
+        @TypedQuery() query: StoreQuery.StoreQueryGetStoreDetailOptions
     ) : Promise<TryCatch<
     StoreDetailDto,
     | typeof ERROR.ServerDatabaseError
     >> {
         try {
-            const result = await this.storeService.getStoreDetailBy(id)
+            const result = await this.storeService.getStoreDetailBy(query.detailId)
             return {
                 data: result,
                 status: 200,

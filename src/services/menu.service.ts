@@ -19,7 +19,7 @@ export class MenuService {
     Promise<void> {
         const menus = await this.menuRepository.getMany()
         const details = await this.menuRepository.getManyDetail()
-
+     
         await this.redis.set("menus", menus, MenuService.name)
         .then(_=> Logger.log("메뉴정보 인 메모리 캐싱"))
         .catch(err => {
@@ -58,8 +58,8 @@ export class MenuService {
             Logger.error("캐시로드오류")
             throw err
         }))?.find(c => c.id === id)
-
-        if(cache !== null) return { ...cache } as MenuDetailDto
+ 
+        if(cache !== undefined && cache !== null) return { ...cache } as MenuDetailDto
         return (await this.menuRepository.getBy({ id })
         .then(d => ({ ...d } as MenuDetailDto))
         .catch(err => {
@@ -83,7 +83,7 @@ export class MenuService {
             throw err
         }))
 
-        if(caches !== null) return caches.filter(c => {
+        if(caches !== undefined && caches !== null) return caches.filter(c => {
             return category !== undefined ? (c.category === category) : true
         })
         return (await this.menuRepository.getMany(category)

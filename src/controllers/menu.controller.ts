@@ -30,15 +30,15 @@ export class MenuController {
         } catch(e) { return e }
     }
 
-    @TypedRoute.Get('/:id')
+    @TypedRoute.Get('detail')
     async getMenuDetail(
-        @TypedParam("id") id: number
+        @TypedQuery() query: MenuQuery.MenuQueryGetDetailOptions
     ) : Promise<TryCatch<
     MenuDetailDto,
     | typeof ERROR.ServerDatabaseError
     >> {
         try {
-            const result = await this.meunService.getMenuDetail(id)
+            const result = await this.meunService.getMenuDetail(query.detailId)
             return {
                 data: result,
                 status: 200,

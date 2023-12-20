@@ -35,13 +35,8 @@ export class SSEService {
     }
 
     disconnectSSE(listener_email: string) {
-        this.notifiers = this.notifiers.filter(user => {
-            if(user.receiver_email === listener_email) {
-                user.subject.unsubscribe();
-                return false
-            }
-            return true
-        })
+        console.log(`${listener_email} has left...`)
+        this.notifiers = this.notifiers.filter(user => user.receiver_email !== listener_email)
     }
 
     pushMessage(subject: SSESubject) {

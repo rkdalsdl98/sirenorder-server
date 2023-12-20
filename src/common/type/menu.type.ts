@@ -1,1 +1,6 @@
-export type BottleSize = "default" | "mega"
+export type BottleSize = 
+| "default" 
+| "Short" 
+| "Tall" 
+| "Grande" 
+| "Venti"

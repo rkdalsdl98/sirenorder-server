@@ -1,4 +1,4 @@
-import { MenuInfo } from "../../common/type/order.type"
+import { MenuInfo, MenuSize, MenuTempture, PackagingMethod } from "../../common/type/order.type"
 
 export interface OrderEntity {
     readonly uuid: string
@@ -13,6 +13,9 @@ export type DeliveryInfo = {
     readonly memo: string
     readonly take: boolean
     readonly paymenttype: PaymentType
+    readonly size: MenuSize
+    readonly packagingMethod: PackagingMethod
+    readonly tempture: MenuTempture
 }
 export type PaymentType = 
 | "virtual-account"

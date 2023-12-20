@@ -58,34 +58,37 @@ export class MenuRepository implements IRepository<MenuEntity, MenuDetailEntity>
     }
 
     parsingMenuEntity(e) : MenuEntity {
+        if(!e) throw ERROR.NotFoundData
         return {
             id: e.id,
             category: e.category,
             name: e.name,
             en_name: e.en_name,
-            price: e.price,
             thumbnail: e.thumbnail,
             detailId: e.detail.id,
         } as MenuEntity
     }
 
     parsingMenuDetailEntity(e) : MenuDetailEntity {
+        if(!e) throw ERROR.NotFoundData
         return {
             id: e.id,
             description: e.description,
+            price: e.price,
             allergys: e.allergys,
             nutritions: e.nutritions.map(n => ({ 
                 size: n.size as BottleSize,
-                calorie: n.calorie.toString(),
-                carbohydrate: n.carbohydrate.toString(),
-                sugars: n.sugars.toString(),
-                salt: n.salt.toString(),
-                protein: n.protein.toString(),
-                fat: n.fat.toString(),
-                cholesterol: n.cholesterol.toString(),
-                transfat: n.transfat.toString(),
-                saturatedfat: n.saturatedfat.toString(),
-                caffeine: n.caffeine.toString(),
+                volume: n.volume,
+                calorie:`${n.calorie}kcal`,
+                carbohydrate: `${n.carbohydrate}g`,
+                sugars: `${n.sugars}g`,
+                salt: `${n.salt}mg`,
+                protein: `${n.protein}g`,
+                fat: `${n.fat}g`,
+                cholesterol: `${n.cholesterol}mg`,
+                transfat: `${n.transfat}g`,
+                saturatedfat: `${n.saturatedfat}g`,
+                caffeine: `${n.caffeine}mg`,
             } as NutritionsEntity))
         } as MenuDetailEntity
     }

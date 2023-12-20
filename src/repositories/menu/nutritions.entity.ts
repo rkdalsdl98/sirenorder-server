@@ -2,6 +2,7 @@ import { BottleSize } from "src/common/type/menu.type"
 
 export interface NutritionsEntity {
     readonly size: BottleSize
+    readonly volume: string
     readonly calorie: string
     readonly carbohydrate: string
     readonly sugars: string

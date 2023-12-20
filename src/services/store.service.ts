@@ -172,6 +172,8 @@ export class StoreService {
             })
             result = this.socket.sendOrder(store.socketId, orderEntity)
         }
+        if(result) this.socket.pushStateMessage(order.buyer_email!, "wait")
+        else this.socket.pushStateMessage(order.buyer_email!, "refuse")
         return result
     }
 
@@ -253,20 +255,26 @@ export class StoreService {
 
         if(caches !== null) {
             return caches.map(s => ({ 
+                uuid: s.uuid,
                 address: s.address,
                 location: s.location,
-                thumbnail: s.thumbnail,
+                thumbnail: s.thumbnail ?? "",
                 detail: s.detail,
+                storename: s.storename,
+                isOpen: s['isOpen'] ?? false,
              } as StoreDto))
         }
         return (await this.storeRepository.getMany().catch(err => {
             Logger.error("상점 리스트 조회 실패", err) 
             throw err
         })).map(s => ({ 
+            uuid: s.uuid,
             address: s.address,
             location: s.location,
-            thumbnail: s.thumbnail,
+            thumbnail: s.thumbnail ?? "",
             detail: s.detail,
+            storename: s.storename,
+            isOpen: s['isOpen'] ?? false,
          } as StoreDto))
     }
 }

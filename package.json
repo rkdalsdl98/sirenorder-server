@@ -18,7 +18,10 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "postinstall": "ts-patch install"
+    "postinstall": "ts-patch install",
+    "prismaupdate:menu": "ts-node --transpile-only ./prisma/update.menu.ts",
+    "prismaupdate:menu:detail": "ts-node --transpile-only ./prisma/update.menu.detail.ts",
+    "prismaupdate:menu:nutritions": "ts-node --transpile-only ./prisma/update.menu.nutritions.ts"
   },
   "dependencies": {
     "@nestia/core": "^2.3.4",
