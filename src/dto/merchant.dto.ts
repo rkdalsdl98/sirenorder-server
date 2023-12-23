@@ -7,7 +7,7 @@ export type MerchantDto = {
 export type StoreInfoDto = {
     readonly storename: string
     readonly address: string
-    readonly thubmnail: string
+    readonly thumbnail: string
     readonly detail: StoreDetailInfoDto
 }
 

@@ -24,7 +24,9 @@ import { StoreRepository } from "src/repositories/store/store.repository";
 import { PortOneMethod } from "../methods/portone.method";
 import { OrderState, RefuseOrder } from "../type/order.type";
 import { SSEService } from "src/services/sse.service";
-import { OrderNotifySubject } from "../type/sse.type";
+import { GiftNotifySubject, NotifyType, OrderNotifySubject, ServerNotifySubject } from "../type/sse.type";
+import { SimpleCouponEntity } from "src/repositories/coupon/coupon.entity";
+import { GiftEntity } from "src/repositories/user/gift.entity";
 
 dotenv.config()
 const port : number = parseInt(process.env.SOCKET_PORT ?? "3001")
@@ -207,6 +209,15 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
                 order_state,
                 receiver_email: buyer_email,
             } as OrderNotifySubject
+        })
+    }
+
+    pushGiftMessage(gift: GiftEntity) {
+        this.sseService.pushMessage({
+            notify_type: "gift-notify",
+            subject: {
+                gift
+            } as GiftNotifySubject
         })
     }
 

@@ -4,7 +4,7 @@ import { PrismaService } from "../../services/prisma.service";
 import { LatLng, StoreEntity } from "./store.entity";
 import { ERROR } from "../../common/type/response.type";
 import { StoreDetailEntity, WeeklyHours } from "./storedetail.entity";
-import { OrderEntity } from "../user/order.entity";
+import { DeliveryInfo, OrderEntity } from "../user/order.entity";
 import { MenuInfo } from "src/common/type/order.type";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { OrderHistory } from "../user/user.entity";
@@ -59,13 +59,17 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
 
     async createOrder(order: OrderEntity)
     : Promise<OrderEntity> {
+        let deliveryinfos : DeliveryInfo[]
+        if(!Array.isArray(order.deliveryinfo)) {
+            deliveryinfos = [order.deliveryinfo]
+        } else deliveryinfos = order.deliveryinfo
         return await this.prisma.$transaction<OrderEntity>(async tx => {
             const createdOrder = this.parsingOrderEntity(await tx.order.create({
                 data: {
                     store_uid: order.store_uid,
                     imp_uid: order.imp_uid,
                     uuid: order.uuid,
-                    deliveryinfo: order.deliveryinfo,
+                    deliveryinfo: deliveryinfos,
                     menus: order.menus,
                     saleprice: order.saleprice,
                     totalprice: order.totalprice,

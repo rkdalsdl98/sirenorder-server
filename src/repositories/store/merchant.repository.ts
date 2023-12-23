@@ -77,7 +77,7 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
                             longitude: 0,
                         },
                         storename: args.createData.storeinfo.storename,
-                        thumbnail: args.createData.storeinfo.thubmnail,
+                        thumbnail: args.createData.storeinfo.thumbnail,
                         detail: {
                             create: {
                                 images: args.createData.storeinfo.detail.images,

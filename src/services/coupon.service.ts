@@ -8,6 +8,7 @@ import { RedisService } from "./redis.service";
 import { UserEntity } from "src/repositories/user/user.entity";
 import { OrderInfo } from "src/common/type/order.type";
 import { GiftInfo } from "src/common/type/gift.type";
+import { GiftEntity } from "src/repositories/user/gift.entity";
 dotenv.config()
 
 const coupon_secret = process.env.COUPON_SECRET
@@ -17,14 +18,12 @@ const coupon_secret = process.env.COUPON_SECRET
 
 @Injectable()
 export class CouponService {
-    // 서버로드시 유효기간이 지난 쿠폰들은 폐기처리
-    
     constructor(
         private readonly auth: AuthService,
         private readonly couponRepoistory: CouponRepository,
         private readonly redis: RedisService,
-    ){}
-    
+    ){ this.couponRepoistory.deleteExpiredCoupon() }
+
     // 쿠폰 발행시 양방향 암호화를 사용하고, salt는 coupon_secret을 이용
     // 쿠폰 검증시 coupon_secret를 이용해서 검증 아닌경우 위조된 정보
     // 발행 루틴: 쿠폰코드 생성(길이 32) => 쿠폰 암호화 => 쿠폰정보등록 =>
@@ -79,7 +78,7 @@ export class CouponService {
         return hash
     }
 
-    async sendGift(giftInfo: GiftInfo) : Promise<void> {
+    async sendGift(giftInfo: GiftInfo) : Promise<GiftEntity> {
         const coupon = await this.publishCoupon(
             giftInfo.to,
             {
@@ -94,6 +93,15 @@ export class CouponService {
             gift: giftInfo,
             coupon,
         })
+        return {
+            coupon,
+            from: giftInfo.from,
+            to: giftInfo.to,
+            message: giftInfo.message,
+            uuid: gift_uid,
+            wrappingtype: giftInfo.wrappingtype,
+            used: false,
+        }
     }
 
     async useGiftCoupon(
@@ -133,7 +141,7 @@ export class CouponService {
             encryption_code,
             gift_uid,
         ).then(async _=> {
-            await this._removeGiftFromUser(user_email, gift_uid)
+            await this._removeGiftFromUser(user_email)
             return true
         })
     }
@@ -167,10 +175,7 @@ export class CouponService {
         return now <= date
     }
 
-    private async _removeGiftFromUser(
-        user_email: string,
-        gift_uid: string,
-    )
+    private async _removeGiftFromUser(user_email: string)
     : Promise<void> {
         const caches = await this.redis.get<UserEntity[]>("users", CouponService.name)
         const user = caches?.find(u => u.email === user_email)
@@ -179,7 +184,12 @@ export class CouponService {
             await this.redis.set("users", 
             [...after, {
                 ...user,
-                gifts: user.gifts.filter(c => c.uuid !== gift_uid),
+                gifts: user.gifts.map(g => {
+                    if(user_email === g.to) {
+                        g.used = true
+                    }
+                    return g;
+                }),
             } as UserEntity], 
                 CouponService.name
             )

@@ -6,7 +6,7 @@ export interface OrderEntity {
     readonly saleprice: number
     readonly totalprice: number
     readonly store_uid: string
-    readonly deliveryinfo: DeliveryInfo
+    readonly deliveryinfo: DeliveryInfo | DeliveryInfo[]
     readonly menus: MenuInfo[]
 }
 export type DeliveryInfo = {

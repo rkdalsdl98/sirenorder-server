@@ -20,7 +20,9 @@ export class LoggingInterceptor implements NestInterceptor {
         if(method === null) return of(ERROR.BadRequest)
         const before = Date.now()
         console.log(`[${Intl.DateTimeFormat('kr').format(before)}]: ${reqAddress} :[${path} : ${method}]`)
-        return next.handle().pipe(
+        return next
+        .handle()
+        .pipe(
             tap(_=> console.log(`[요청 처리 성공] ${ Date.now() - before}/ms`))
         )
     }

@@ -8,41 +8,84 @@ import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { WalletEntity } from "./wallet.entity";
 import { GiftEntity } from "./gift.entity";
 import { SimpleCouponEntity } from "../coupon/coupon.entity";
+import { Prisma } from "@prisma/client";
 
 @Injectable()
 export class UserRepository implements IRepository<UserEntity, undefined> {
     constructor(
         private readonly prisma: PrismaService
     ){}
-    
-    async test() {
-        await this.prisma.user.update({
-            where: { email: "rkdalsdl112@gmail.com" },
-            data: {
-                gifts: {
-                    deleteMany: {}
-                }
-            }
-        })
-    }
 
-    async getMany(): Promise<UserEntity[]> {
-        return (await this.prisma.user.findMany({
-            include: {
-                wallet: {
-                    select: {
-                        point: true,
-                        stars: true,
-                        uuid: true,
+    async loadUsers()
+    : Promise<UserEntity[]> {
+        return await this.prisma.$transaction<UserEntity[]>(async tx => {
+            const users = (await tx.user.findMany({
+                include: {
+                    wallet: {
+                        select: {
+                            point: true,
+                            stars: true,
+                            uuid: true,
+                        }
+                    },
+                    gifts: true,
+                }
+            })
+            .catch(err => {
+                Logger.error("유저 데이터를 불러오는데 실패했습니다.", err.toString(), UserRepository)
+                throw ERROR.ServerDatabaseError
+            })).map(e => this.parsingEntity(e))
+
+            const now = new Date(Date.now())
+            const needUpdateUsers : Record<string, UserEntity> = {}
+            const filteredUsers : UserEntity[] = users.map(user => {
+                let needUpdate = false
+                const coupons = user.coupons.filter(coupon => {
+                    const couponExpiration = new Date(coupon.expiration_period)
+                    if(couponExpiration < now) {
+                        needUpdate = true
+                        return false
                     }
-                },
-                gifts: true,
+                    return true
+                })
+                const gifts = user.gifts.map(gift => {
+                    const giftExpiration = new Date(gift.coupon.expiration_period)
+                    if(giftExpiration < now) {
+                        gift.used = true
+                        needUpdate = true
+                    }
+                    return gift
+                })
+                const filterdUser = {
+                    ...user,
+                    coupons,
+                    gifts,
+                } as UserEntity
+                needUpdateUsers[`${filterdUser.uuid}`] = filterdUser
+                return filterdUser
+            })
+
+            for(var uuid in needUpdateUsers.keys) {
+                const user = needUpdateUsers[uuid]
+                await tx.user.update({
+                    where: { uuid },
+                    data: {
+                        coupons: { set: user.coupons.map(coupon => ({ ...coupon } as Prisma.InputJsonValue)) },
+                        gifts: {
+                            updateMany: {
+                                where: {
+                                    OR: user.gifts.map(gift => ({ uuid: gift.uuid }))
+                                },
+                                data: {
+                                    used: true,
+                                }
+                            }
+                        }
+                    },
+                })
             }
+            return filteredUsers
         })
-        .catch(err => {
-            Logger.error("데이터를 불러오는데 실패했습니다.", err.toString(), UserRepository)
-            throw ERROR.ServerDatabaseError
-        })).map(e => this.parsingEntity(e))
     }
 
     async getBy(args: {
@@ -143,7 +186,7 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
                         point: updateData.wallet?.point,
                         stars: updateData.wallet?.stars,
                     }
-                }
+                },
             },
             include: {
                 wallet: true,
@@ -176,7 +219,7 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
         }))
     }
 
-    parsingHistoryEntity(e) {
+    private parsingHistoryEntity(e) {
         if(!e) throw ERROR.NotFoundData
         return {
             imp_uid: e.imp_uid,
@@ -189,7 +232,7 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
         } as OrderHistory
     }
 
-    parsingEntity(e) : UserEntity {
+    private parsingEntity(e) : UserEntity {
         if(!e) throw ERROR.NotFoundData
         return {
             uuid: e.uuid,
@@ -230,5 +273,13 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
             createdAt: e.createdAt,
             updatedAt: e.updatedAt
         }
+    }
+
+    private stringToDate(str: string | string[]) : 
+    | Date
+    | Date[] {
+        return Array.isArray(str) 
+        ? str.map(s => new Date(s))
+        : new Date(str)
     }
 }

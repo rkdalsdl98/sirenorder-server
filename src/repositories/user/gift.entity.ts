@@ -7,5 +7,6 @@ export interface GiftEntity {
     readonly coupon: SimpleCouponEntity
     readonly to: string
     readonly from: string
+    used: boolean
     readonly wrappingtype: GiftWrappingType
 }

@@ -20,9 +20,7 @@ export class StoreService {
         private readonly couponService: CouponService,
         private readonly redis: RedisService,
         private readonly socket: SocketGateWay,
-    ){
-        this._initialized()
-    }
+    ){ this._initialized() }
 
     private async _initialized() :
     Promise<void> {
@@ -82,7 +80,6 @@ export class StoreService {
         code: string, 
         gift_uid: string
     ) : Promise<boolean> {
-        // 선물받은 유저가 알 수 있는 루틴이 필요
         return await this.couponService.useGiftCoupon(
             user_email,
             code,
@@ -110,7 +107,7 @@ export class StoreService {
             throw err
         }
         const message = giftInfo.message ?? ""
-        await this.couponService.sendGift({
+        const gift = await this.couponService.sendGift({
             from: giftInfo.from,
             to: giftInfo.to,
             menu: giftInfo.menu,
@@ -119,6 +116,7 @@ export class StoreService {
             imp_uid: imp_uid,
             order_uid: order_uid,
         } as GiftInfo)
+        this.socket.pushGiftMessage(gift)
     }
 
     // 실패 구문마다 주문 취소 루틴을 넣어주자
@@ -252,7 +250,7 @@ export class StoreService {
             Logger.error("캐시로드오류")
             throw err
         }))
-
+        
         if(caches !== null) {
             return caches.map(s => ({ 
                 uuid: s.uuid,

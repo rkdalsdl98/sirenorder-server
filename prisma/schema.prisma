@@ -45,6 +45,7 @@ model gift {
   menu Json
   imp_uid String
   order_uid String
+  used Boolean @default(false)
   wrappingtype String @default("default")
   user user @relation("Gift", references: [email], fields: [user_email], onDelete: Cascade)
   user_email String
@@ -61,7 +62,7 @@ model order {
   imp_uid String
   saleprice Int @default(0)
   totalprice Int @default(0)
-  deliveryinfo Json
+  deliveryinfo Json[]
   store_uid String
   menus Json[]
 }

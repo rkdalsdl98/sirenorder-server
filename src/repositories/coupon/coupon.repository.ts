@@ -13,6 +13,29 @@ export class CouponRepository implements IRepository<CouponEntity, unknown> {
         private readonly prisma: PrismaService,
     ){}
 
+    async deleteExpiredCoupon()
+    : Promise<void> {
+        await this.prisma.coupon.deleteMany({
+            where: {
+                AND: {
+                    expirationperiod: {
+                        lt: new Date(Date.now())
+                    }
+                }
+            }
+        })
+        .then(_=> Logger.log("쿠폰정보 초기화"))
+        .catch(err => {
+            Logger.error("쿠폰정보 초기화중 오류가 발생했습니다.", CouponRepository.name)
+            throw ERROR.ServerDatabaseError
+        })
+    }
+
+    async getMany(): Promise<CouponEntity[]> {
+        return (await this.prisma.coupon.findMany())
+        .map(c => this.parsingEntity(c))
+    }
+
     async getBy(code: string ): Promise<CouponEntity> {
         return this.parsingEntity(await this.prisma.coupon.findUnique({
             where: { code }
@@ -126,7 +149,12 @@ export class CouponRepository implements IRepository<CouponEntity, unknown> {
             await tx.user.update({
                 where: { email: current_user_email },
                 data: {
-                    gifts: { delete: { uuid: gift_uid } }
+                    gifts: { 
+                        update: {
+                            where: { uuid : gift_uid },
+                            data: { used: true },
+                        }
+                    }
                 }
             })
             .catch(err => {

@@ -16,13 +16,11 @@ export class UserService {
         private readonly email: EmailService,
         private readonly auth: AuthService,
         private readonly config: ConfigService,
-    ){
-        this._initialized()
-    }
+    ){ this._initialized() }
 
     private async _initialized() :
     Promise<void> {
-        const users = (await this.userRepository.getMany())
+        const users = (await this.userRepository.loadUsers())
         await this.redis.set("users", users, UserService.name)
         .then(_=> Logger.log("유저정보 인 메모리 캐싱"))
         .catch(err => {
@@ -125,23 +123,22 @@ export class UserService {
         if(isVerify) {
             // accesstoken과 refreshtoken 발행
             const { accesstoken, refreshtoken } = await this._publishTokens(findUser.email)
-            const user = await this.userRepository.updateBy({
+            await this.userRepository.updateBy({
                 accesstoken: accesstoken,
                 refreshtoken: refreshtoken,
             }, findUser.email)
-
-            await this._upsertCache(user)
+            await this._upsertCache(findUser)
             return { 
-                tel: user.tel,
-                email: user.email,
-                nickname: user.nickname,
-                wallet: user.wallet,
-                gifts: user.gifts,
-                coupons: user.coupons,
-                orderhistory: user.orderhistory,
-                createdAt: user.createdAt,
-                updatedAt: user.updatedAt,
-                accesstoken: user.accesstoken,
+                tel: findUser.tel,
+                email: findUser.email,
+                nickname: findUser.nickname,
+                wallet: findUser.wallet,
+                gifts: findUser.gifts,
+                coupons: findUser.coupons,
+                orderhistory: findUser.orderhistory,
+                createdAt: findUser.createdAt,
+                updatedAt: findUser.updatedAt,
+                accesstoken: findUser.accesstoken,
             } as UserDto
         }
         var error = ERROR.UnAuthorized
@@ -300,21 +297,71 @@ export class UserService {
             Logger.error("캐시로드오류")
             throw err
         }))?.find(c => c.email === email)
-
         if(cache !== undefined) {
             // 레디스에서 가져온 Date 타입이 string 타입으로 바꿔 반환해주기 때문에
             // Date로 변환 해줌
             // .toString()으로 string 타입 변환해주는 이유는
             // 반환 타입이 Date로 출력되지만 Date타입 변수에 넣어주면 타입 오류반환함
+            const coupons = cache.coupons.map(coupon => {
+                return {
+                    ...coupon,
+                    expiration_period: this._stringToDate(coupon.expiration_period.toString()),
+                }
+            })
+            const gifts = cache.gifts.map(gift => {
+                return {
+                    ...gift,
+                    coupon: {
+                        ...gift.coupon,
+                        expiration_period: this._stringToDate(
+                            gift.coupon.expiration_period.toString()
+                        ),
+                    }
+                }
+            })
             const dates = this._stringToDate([
                 cache.createdAt.toString(),
                 cache.updatedAt.toString(),
             ])
             cache.createdAt = dates[0]
             cache.updatedAt = dates[1]
-            return cache
+            return {
+                ...cache,
+                gifts,
+                coupons,
+            } as UserEntity
         }
         return await this.userRepository.getBy({ email })
+        .then(user => {
+            const coupons = user.coupons.map(coupon => {
+                return {
+                    ...coupon,
+                    expiration_period: this._stringToDate(coupon.expiration_period.toString()),
+                }
+            })
+            const gifts = user.gifts.map(gift => {
+                return {
+                    ...gift,
+                    coupon: {
+                        ...gift.coupon,
+                        expiration_period: this._stringToDate(
+                            gift.coupon.expiration_period.toString()
+                        ),
+                    }
+                }
+            })
+            const dates = this._stringToDate([
+                user.createdAt.toString(),
+                user.updatedAt.toString(),
+            ])
+            user.createdAt = dates[0]
+            user.updatedAt = dates[1]
+            return {
+                ...user,
+                gifts,
+                coupons,
+            } as UserEntity
+        })
         .catch(err => {
             Logger.error("유저 정보조회 실패") 
             throw err

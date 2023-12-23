@@ -11,9 +11,7 @@ export class MenuService {
     constructor(
         private readonly menuRepository: MenuRepository,
         private readonly redis: RedisService,
-    ){
-        this._initialized()
-    }
+    ){ this._initialized() }
 
     private async _initialized() :
     Promise<void> {
