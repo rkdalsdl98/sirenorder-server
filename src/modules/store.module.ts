@@ -6,15 +6,20 @@ import { MerchantService } from "../services/merchant.service";
 import { PrismaService } from "../services/prisma.service";
 import { RedisService } from "../services/redis.service";
 import { StoreService } from "../services/store.service";
-import { JwtService } from "@nestjs/jwt";
-import { JwtFactory } from "../common/jwt/jwtfactory";
-import { AuthService } from "../services/auth.service";
 import { ConfigService } from "@nestjs/config";
 import { MerchantController } from "src/controllers/merchant.controller";
 import { SocketModule } from "./socket.module";
+import { JwtModule } from "./jwt.module";
+import { AuthModule } from "./auth.module";
+import { CouponModule } from "./coupon.module";
 
 @Module({
-    imports: [SocketModule],
+    imports: [
+        SocketModule,
+        JwtModule,
+        AuthModule,
+        CouponModule,
+    ],
     controllers: [
         StoreController,
         MerchantController,
@@ -24,9 +29,6 @@ import { SocketModule } from "./socket.module";
         StoreRepository,
         RedisService,
         PrismaService,
-        JwtService,
-        JwtFactory,
-        AuthService,
         ConfigService,
         MerchantRepository,
         MerchantService,

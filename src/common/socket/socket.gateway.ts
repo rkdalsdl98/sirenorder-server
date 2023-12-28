@@ -10,8 +10,8 @@ import {
     WebSocketServer, 
 } from "@nestjs/websockets"
 import { Server, Socket } from "socket.io";
-import { LoginRequest, SocketResponse, SocketResponseBody } from "../type/socket.type";
-import { ERROR, FailedResponse } from "../type/response.type";
+import { LoginRequest, SocketResponse } from "../type/socket.type";
+import { ERROR } from "../type/response.type";
 import { AuthService } from "src/services/auth.service";
 
 import * as dotenv from "dotenv"
@@ -21,6 +21,11 @@ import { RedisService } from "src/services/redis.service";
 import { StoreWalletEntity } from "src/repositories/store/storewallet.entity";
 import { OrderEntity } from "src/repositories/user/order.entity";
 import { StoreRepository } from "src/repositories/store/store.repository";
+import { PortOneMethod } from "../methods/portone.method";
+import { OrderState, RefuseOrder } from "../type/order.type";
+import { SSEService } from "src/services/sse.service";
+import { GiftNotifySubject, OrderNotifySubject } from "../type/sse.type";
+import { GiftEntity } from "src/repositories/user/gift.entity";
 
 dotenv.config()
 const port : number = parseInt(process.env.SOCKET_PORT ?? "3001")
@@ -36,6 +41,7 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
         private readonly storeRepository: StoreRepository,
         private readonly auth: AuthService,
         private readonly redis: RedisService,
+        private readonly sseService: SSEService,
     ){}
 
     @WebSocketServer() private readonly server: Server;
@@ -46,25 +52,64 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
         return { message: 'pong' }
     }
 
+    @SubscribeMessage('finish-order')
+    async handleFinishOrder(
+        @MessageBody() data: string
+    ) : Promise<SocketResponse<
+    any,
+    | typeof ERROR.ServerDatabaseError
+    | typeof ERROR.ServerCacheError
+    | typeof ERROR.NotFoundData>> {
+        try {
+            const buyer_email = await PortOneMethod.finishOrder({
+                order_uid: data,
+                redis: this.redis,
+                repository: this.storeRepository,
+            })
+            this.pushStateMessage(buyer_email, "finish")
+            return {
+                result: true,
+                message:"finish",
+            }
+        } catch(e) {
+            await PortOneMethod.removeOrderById({
+                redis: this.redis,
+                order_uid: data,
+            })
+            await this.storeRepository.deleteOrder(data)
+            return {
+                result: false,
+                message: "fail",
+                data: e,
+            }
+        }
+    }
+
+
     @SubscribeMessage('accept-order')
     async handleAccpetOrder(
         @MessageBody() data: string
     ) : Promise<SocketResponse<
     any,
     | typeof ERROR.ServerDatabaseError
+    | typeof ERROR.ServerCacheError
     | typeof ERROR.NotFoundData>> {
         try {
-            await this.redis.set(data, "accept", SocketGateWay.name)
-            .catch(err => {
-                Logger.error("주문 승인중 오류가 발생했습니다.", SocketGateWay.name)
-                throw err
+            const buyer_email = await PortOneMethod.acceptOrder({
+                order_uid: data,
+                redis: this.redis,
+                repository: this.storeRepository,
             })
-            
+            this.pushStateMessage(buyer_email, "accept")
             return {
                 result: true,
                 message: "accept",
             }
         } catch(e) {
+            await PortOneMethod.removeOrderById({
+                redis: this.redis,
+                order_uid: data,
+            })
             return {
                 result: false,
                 message: "fail",
@@ -75,25 +120,26 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
 
     @SubscribeMessage('refuse-order')
     async handleRefuseOrder(
-        @MessageBody() data: OrderEntity
+        @MessageBody() data: RefuseOrder
     ) : Promise<SocketResponse<
     any, 
     | typeof ERROR.ServerDatabaseError
+    | typeof ERROR.ServerCacheError
     | typeof ERROR.NotFoundData
     >> {
         try {
-            const result : boolean 
-            = !!(await this.storeRepository.deleteOrder(data.uuid)
-            .then(async res => {
-                await this.redis.set(data.uuid, "refuse", SocketGateWay.name)
-                return res
+            // const result : boolean = await PortOneMethod.refuseOrder({
+            //     reason: data.reason,
+            //     imp_uid: data.imp_uid,
+            //     redis: this.redis
+            // })
+            const buyer_email = await PortOneMethod.removeOrderById({
+                redis: this.redis,
+                order_uid: data.uuid,
             })
-            .catch(err => {
-                Logger.error("주문 삭제중 오류가 발생했습니다.", SocketGateWay.name)
-                throw err
-            }))
+            this.pushStateMessage(buyer_email, "refuse")
             return {
-                result,
+                result: true,
                 message: "refuse",
             }
         } catch(e) {
@@ -151,10 +197,32 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
         }
     }
 
+    pushStateMessage(
+        buyer_email: string, 
+        order_state: OrderState,
+    ) {
+        this.sseService.pushMessage({
+            notify_type: "order-notify",
+            subject: {
+                order_state,
+                receiver_email: buyer_email,
+            } as OrderNotifySubject
+        })
+    }
+
+    pushGiftMessage(gift: GiftEntity) {
+        this.sseService.pushMessage({
+            notify_type: "gift-notify",
+            subject: {
+                gift
+            } as GiftNotifySubject
+        })
+    }
+
     sendOrder(socketId: string, order: OrderEntity)
     : boolean {
         return this.server
-        .timeout(1000)
+        .timeout(300)
         .to(socketId)
         .emit(
             "order", 

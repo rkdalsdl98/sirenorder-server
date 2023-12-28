@@ -7,16 +7,18 @@ import { UserService } from "../services/user.service";
 import { AuthGuard } from "src/common/guards/auth.guard";
 import { AuthDecorator } from "src/common/decorators/auth.decorator";
 import { UserDto } from "src/dto/user.dto";
+import { CouponService } from "src/services/coupon.service";
 
 @Controller('user')
 @ApiTags("유저")
 export class UserController {
     constructor(
-        private readonly userService: UserService
+        private readonly userService: UserService,
+        private readonly couponService: CouponService,
     ){}
     
-    @TypedRoute.Post("regist")
-    async registUser(
+    @TypedRoute.Post("regist/publish")
+    async publishCode(
         @TypedQuery() query : UserQuery.UserQueryRegistOptions
     ) : Promise<TryCatch<
     boolean,
@@ -24,7 +26,7 @@ export class UserController {
     | typeof ERROR.FailedSendMail
     >> {
         try {
-            const result = await this.userService.registUser(query.email, query.pass, query.nickname)
+            const result = await this.userService.publishCode(query.email, query.pass, query.nickname)
             return { 
                 data: result, 
                 status: 201
@@ -46,6 +48,26 @@ export class UserController {
                 data: result,
                 status: 201
             }
+        } catch(e) {
+            console.log(e)
+            return e
+        }
+    }
+
+    @TypedRoute.Post("regist")
+    async registUser(
+        @TypedQuery() query : UserQuery.UserQueryCreateOptions
+    ) : Promise<TryCatch<
+    boolean,
+    | typeof ERROR.ServerDatabaseError
+    | typeof ERROR.NotFoundData
+    >> {
+        try {
+            const result = await this.userService.registUser(query.email)
+            return {
+                data: result,
+                status: 201,
+            }
         } catch(e) { return e }
     }
 
@@ -62,7 +84,7 @@ export class UserController {
             const result = await this.userService.loginByPass(query.email, query.pass)
             return {
                 data: result,
-                status: 200
+                status: 201
             }
         } catch(e) { return e }
     }
@@ -90,18 +112,32 @@ export class UserController {
         } catch(e) { return e }
     }
 
-    @TypedRoute.Post("payment/order")
-    async paymentOrder() {}
+    @TypedRoute.Post("coupon")
+    async useCoupon(
 
-    @TypedRoute.Post("payment/order/webhook")
-    async sendOrderToMerchant() {}
+    ): Promise<TryCatch<
+    boolean,
+    | typeof ERROR.ServerDatabaseError
+    | typeof ERROR.NotFoundData
+    | typeof ERROR.UnAuthorized
+    >> {
+        try {
+            return {
+                data: true,
+                status: 201,
+            }
+        } catch(e) { return e }
+    }
 
-    @TypedRoute.Post("payment/point")
-    async paymentPoint() {}
-
-    @TypedRoute.Post("payment/point/webhook")
-    async chargePoint() {}
-
-    @TypedRoute.Delete()
-    async deleteUser() {}
+    // @TypedRoute.Delete()
+    // async deleteUser(
+    //     @TypedQuery() query: { email: string },
+    // ) {
+    //     try {
+    //         return await this.userService.deleteUser(query.email)
+    //     } catch(e) {
+    //         console.log(e)
+    //         return e
+    //     }
+    // }
 }

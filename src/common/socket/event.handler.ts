@@ -17,11 +17,16 @@ export namespace SocketEventHandler {
         ) => {
             const caches = await redis.get<RoomJoinOptions[]>("stores", logPath)
             const store = caches!.find(s => s.storeId === storeId)
+            
             if(!store) {
                 throw ERROR.NotFoundData
             } else {
                 const after = caches?.map(c => {
-                    if(c.storeId === storeId) return { ...store, isOpen: true, socketId }
+                    if(c.storeId === storeId) return { 
+                        ...store, 
+                        isOpen: true, 
+                        socketId,
+                    }
                     return c
                 })
                 await redis.set("stores", 

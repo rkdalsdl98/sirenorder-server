@@ -1,4 +1,4 @@
-import { TypedBody, TypedQuery, TypedRoute } from "@nestia/core";
+import { TypedQuery, TypedRoute } from "@nestia/core";
 import { Body, Controller } from "@nestjs/common";
 import { ERROR, TryCatch } from "src/common/type/response.type";
 import { MerchantQuery } from "src/query/merchant.query";

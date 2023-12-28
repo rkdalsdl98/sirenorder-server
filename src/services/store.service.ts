@@ -5,20 +5,24 @@ import { RedisService } from "./redis.service";
 import { StoreEntity } from "src/repositories/store/store.entity";
 import { RoomJoinOptions } from "src/common/type/socket.type";
 import { SocketGateWay } from "src/common/socket/socket.gateway";
-import { OrderEntity } from "src/repositories/user/order.entity";
-import { AuthService } from "./auth.service";
+import { DeliveryInfo, OrderEntity } from "src/repositories/user/order.entity";
+import { ERROR } from "src/common/type/response.type";
 import { OrderDto } from "src/dto/user.dto";
+import { PortOneMethod } from "src/common/methods/portone.method";
+import { OrderInfo, RegisteredOrder } from "src/common/type/order.type";
+import { CouponService } from "./coupon.service";
+import { GiftInfo } from "src/common/type/gift.type";
+import { AuthService } from "./auth.service";
 
 @Injectable()
 export class StoreService {
     constructor(
         private readonly storeRepository: StoreRepository,
+        private readonly couponService: CouponService,
+        private readonly authService: AuthService,
         private readonly redis: RedisService,
         private readonly socket: SocketGateWay,
-        private readonly auth: AuthService,
-    ){
-        this._initialized()
-    }
+    ){ this._initialized() }
 
     private async _initialized() :
     Promise<void> {
@@ -33,40 +37,191 @@ export class StoreService {
         })
     }
 
-    async sendOrder(order: OrderDto)
-    : Promise<{ orderId: string | null, result: boolean }> {
-        const store = (await this.redis.get<RoomJoinOptions[]>("stores", StoreService.name))
-        ?.find(s => s.storeId === order.store_uid)
-        if(store && store.isOpen && store.socketId) {
-            const orderId = this.auth.getRandUUID()
-            const create = await this.storeRepository.createOrder({
-                ...order,
-                uuid: orderId,
-            })
+    async paymentFactory({
+        order_uid,
+        imp_uid,
+        status,
+    } : {
+        order_uid: string,
+        imp_uid: string,
+        status: string,
+    })
+    : Promise<void> {
+        const order: OrderDto = await PortOneMethod.findOrder(imp_uid)
+        let { type } = JSON.parse(order.custom_data)
+
+        const userUUIDs = { order_uid, imp_uid }
+        const portOneUUIDs = { order_uid: order.merchant_uid, imp_uid: order.imp_uid }
+        if(!this._equalUUIds(portOneUUIDs, userUUIDs)) {
+            this._refuseOrder(order_uid)
+            var err = ERROR.BadRequest
+            err.substatus = "ForgeryData"
+            throw err
+        }
+
+        switch(type) {
+            case "order":
+                await this.sendOrder({
+                    order_uid,
+                    order,
+                })
+                break
+            case "gift":
+                await this.sendGift({
+                    order_uid,
+                    imp_uid,
+                    order,
+                })
+                break
+        }
+    }
+
+    async useCoupon(
+        storeId: string,
+        user_email: string, 
+        code: string,
+        deliveryinfo: DeliveryInfo,
+    ) : Promise<{ message?: string, result: boolean }> {
+        const socketId = await this._isOpenStore(storeId)
+        if(!socketId || socketId === undefined) {
+            return {
+                message: "영업중인 매장이 아닙니다.",
+                result: false,
+            }
+        }
+        const useResult = await this.couponService.useCoupon(
+            user_email,
+            code,
+        )
+        if(typeof useResult.result === "boolean") {
+            return {
+                message: useResult.message,
+                result: useResult.result,
+            }
+        } else {
+            const randUUID = this.authService.getRandUUID()
+            const order: RegisteredOrder = {
+                deliveryinfo: [deliveryinfo],
+                imp_uid: randUUID.substring(0, 12),
+                menus: [useResult.result.menuinfo],
+                saleprice: 0,
+                store_uid: storeId,
+                totalprice: useResult.result.menuinfo.price,
+                uuid: randUUID,
+                buyer_email: user_email,
+                state: "wait",
+            }
+            await this.redis.set(order.uuid, order, StoreService.name)
             .catch(err => {
-                Logger.error("주문 생성 실패", err) 
+                this._refuseOrder(order.uuid)
+                Logger.error("주문정보 캐싱 실패", StoreService.name)
+                this.socket.pushStateMessage(user_email, "refuse")
                 throw err
             })
+            const result = this.socket.sendOrder(socketId, order)
+            if(result) this.socket.pushStateMessage(user_email, "wait")
+            else this.socket.pushStateMessage(user_email, "refuse")
+            return { result }
+        }
+    }
 
-            const result = this.socket.sendOrder(store.socketId, create)
-            if(result) {
-                await this.redis.set(orderId, "wait", StoreService.name)
-                return {
-                    orderId,
-                    result,
-                }
+    async useGift(
+        user_email: string, 
+        code: string, 
+        gift_uid: string
+    ) : Promise<boolean> {
+        return await this.couponService.useGiftCoupon(
+            user_email,
+            code,
+            gift_uid,
+        )
+    }
+
+    async sendGift({
+        order_uid,
+        imp_uid,
+        order,
+    } : {
+        order_uid: string,
+        imp_uid: string,
+        order: OrderDto,
+    }) 
+    : Promise<void> {
+        let { data } = JSON.parse(order.custom_data)
+        let { giftInfo } : { giftInfo : GiftInfo } = JSON.parse(data)
+
+        if(!giftInfo) {
+            this._refuseOrder(order_uid)
+            var err = ERROR.BadRequest
+            err.substatus = "ForgeryData"
+            throw err
+        }
+        const message = giftInfo.message ?? ""
+        const gift = await this.couponService.sendGift({
+            from: giftInfo.from,
+            to: giftInfo.to,
+            menu: giftInfo.menu,
+            wrappingtype: giftInfo.wrappingtype,
+            message: message,
+            imp_uid: imp_uid,
+            order_uid: order_uid,
+        } as GiftInfo)
+        this.socket.pushGiftMessage(gift)
+    }
+
+    // 실패 구문마다 주문 취소 루틴을 넣어주자
+    // 주문취소 루틴에 주문번호를 넣어 캐시데이터만 삭제처리 하도록 해두었음
+    async sendOrder({
+        order_uid,
+        order,
+    } : {
+        order_uid: string,
+        order: OrderDto,
+    })
+    : Promise<boolean> {
+        let result = false
+
+        let { data } = JSON.parse(order.custom_data)
+        let { storeId, orderInfo } : { storeId: string, orderInfo: OrderInfo } = JSON.parse(data)
+        const store = (await this.redis.get<RoomJoinOptions[]>("stores", StoreService.name))
+        ?.find(s => s.storeId === storeId)
+
+        if(store && store.isOpen && store.socketId) {
+            if(!orderInfo) {
+                this._refuseOrder(order_uid)
+                var err = ERROR.BadRequest
+                err.substatus = "ForgeryData"
+                throw err
+            } else if(!store.socketId) {
+                this._refuseOrder(order_uid)
+                throw ERROR.NotFound
             }
 
-            return {
-                orderId: null,
-                result,
-            }
-        }
+            const { menus, deliveryinfo } = orderInfo
+            const orderEntity = {
+                uuid: order_uid,
+                imp_uid: order.imp_uid,
+                saleprice: 0,
+                totalprice: order.amount,
+                store_uid: store.storeId,
+                deliveryinfo,
+                menus,
+                state: "wait",
+                buyer_email: order.buyer_email,
+            } as RegisteredOrder
 
-        return {
-            orderId: null,
-            result: false,
+            await this.redis.set(orderEntity.uuid, orderEntity, StoreService.name)
+            .catch( err => {
+                this._refuseOrder(order_uid)
+                Logger.error("주문정보 캐싱 실패", StoreService.name)
+                this.socket.pushStateMessage(order.buyer_email!, "refuse")
+                throw err
+            })
+            result = this.socket.sendOrder(store.socketId, orderEntity)
         }
+        if(result) this.socket.pushStateMessage(order.buyer_email!, "wait")
+        else this.socket.pushStateMessage(order.buyer_email!, "refuse")
+        return result
     }
 
     async getStoreDetailBy(id: number) : 
@@ -93,6 +248,38 @@ export class StoreService {
         return await this._getStores()
     }
 
+    private async _isOpenStore(storeId: string)
+    : Promise<string | undefined | null> {
+        return (await this.redis.get<RoomJoinOptions[]>("stores", CouponService.name))
+        ?.find(store => store.storeId === storeId)?.socketId
+    }
+
+    private _equalUUIds(
+        portOne: {imp_uid: string, order_uid: string},
+        user: {imp_uid: string, order_uid: string},
+    ) : boolean {
+        return portOne.imp_uid === user.imp_uid && portOne.order_uid === user.order_uid
+    }
+
+    private async _refuseOrder(uuid: string)
+    : Promise<void> {
+        // const refused = await PortOneMethod.refuseOrder({
+        //     redis: this.redis,
+        //     reason: "조리불가",
+        //     imp_uid: uuid,
+        // })
+            
+        //if(!refused) Logger.error("주문삭제 실패", StoreService.name)
+        await PortOneMethod.removeOrderById({
+            redis: this.redis,
+            order_uid: uuid,
+        })
+        .catch(err => {
+            Logger.error("주문삭제 실패", StoreService.name)
+            throw err
+        })
+    }
+
     /**
      * 유저정보조회
      * 
@@ -107,23 +294,29 @@ export class StoreService {
             Logger.error("캐시로드오류")
             throw err
         }))
-
+        
         if(caches !== null) {
             return caches.map(s => ({ 
+                uuid: s.uuid,
                 address: s.address,
                 location: s.location,
-                thumbnail: s.thumbnail,
+                thumbnail: s.thumbnail ?? "",
                 detail: s.detail,
+                storename: s.storename,
+                isOpen: s['isOpen'] ?? false,
              } as StoreDto))
         }
         return (await this.storeRepository.getMany().catch(err => {
             Logger.error("상점 리스트 조회 실패", err) 
             throw err
         })).map(s => ({ 
+            uuid: s.uuid,
             address: s.address,
             location: s.location,
-            thumbnail: s.thumbnail,
+            thumbnail: s.thumbnail ?? "",
             detail: s.detail,
+            storename: s.storename,
+            isOpen: s['isOpen'] ?? false,
          } as StoreDto))
     }
 }

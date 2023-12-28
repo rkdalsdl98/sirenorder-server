@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { IRepository } from "src/common/interface/irepository";
-import { MenuEntity } from "./menu.entity";
+import { Category, MenuEntity } from "./menu.entity";
 import { PrismaService } from "src/services/prisma.service";
 import { ERROR } from "src/common/type/response.type";
 import { MenuDetailEntity } from "./menudetail.entity";
@@ -38,8 +38,11 @@ export class MenuRepository implements IRepository<MenuEntity, MenuDetailEntity>
         }))
     }
 
-    async getMany(): Promise<MenuEntity[]> {
-        return (await this.prisma.menu.findMany({ include: { detail: { select: { id: true }} }})
+    async getMany(category?: Category): Promise<MenuEntity[]> {
+        return (await this.prisma.menu.findMany({
+            where: { category },
+            include: { detail: { select: { id: true }} 
+        }})
         .catch(err => {
             Logger.error("데이터를 불러오는데 실패했습니다.", err.toString(), MenuRepository)
             throw ERROR.ServerDatabaseError
@@ -55,33 +58,37 @@ export class MenuRepository implements IRepository<MenuEntity, MenuDetailEntity>
     }
 
     parsingMenuEntity(e) : MenuEntity {
+        if(!e) throw ERROR.NotFoundData
         return {
             id: e.id,
+            category: e.category,
             name: e.name,
             en_name: e.en_name,
-            price: e.price,
             thumbnail: e.thumbnail,
             detailId: e.detail.id,
         } as MenuEntity
     }
 
     parsingMenuDetailEntity(e) : MenuDetailEntity {
+        if(!e) throw ERROR.NotFoundData
         return {
             id: e.id,
             description: e.description,
+            price: e.price,
             allergys: e.allergys,
             nutritions: e.nutritions.map(n => ({ 
                 size: n.size as BottleSize,
-                calorie: n.calorie.toString(),
-                carbohydrate: n.carbohydrate.toString(),
-                sugars: n.sugars.toString(),
-                salt: n.salt.toString(),
-                protein: n.protein.toString(),
-                fat: n.fat.toString(),
-                cholesterol: n.cholesterol.toString(),
-                transfat: n.transfat.toString(),
-                saturatedfat: n.saturatedfat.toString(),
-                caffeine: n.caffeine.toString(),
+                volume: n.volume,
+                calorie:`${n.calorie}kcal`,
+                carbohydrate: `${n.carbohydrate}g`,
+                sugars: `${n.sugars}g`,
+                salt: `${n.salt}mg`,
+                protein: `${n.protein}g`,
+                fat: `${n.fat}g`,
+                cholesterol: `${n.cholesterol}mg`,
+                transfat: `${n.transfat}g`,
+                saturatedfat: `${n.saturatedfat}g`,
+                caffeine: `${n.caffeine}mg`,
             } as NutritionsEntity))
         } as MenuDetailEntity
     }

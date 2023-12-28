@@ -2,14 +2,16 @@
     "1": {
         "name": "아메리카노",
         "en_name": "Americano",
-        "price": 2000,
-        "thumbnail": "https://www.google.com/",
+        "category": "drink",
+        "thumbnail": "https://firebasestorage.googleapis.com/v0/b/mocatmall.appspot.com/o/americano.jpg?alt=media&token=74fa17d9-05ba-4a81-a828-d00538573b84",
         "detail": {
-            "description": "고소한 맛이 나는 커피",
-            "allergys": [],
+            "description": "메가MGC커피 블렌드 원두로 추출한 에스프레소에 물을 더해,\n풍부한 바디감을 느낄 수 있는 스탠다드 커피.",
+            "price": 2000,
+            "allergys": ["고카페인 함유"],
             "nutritions": [
                 {
-                    "size": "default",
+                    "size": "Grande",
+                    "volume": "591ml",
                     "calorie": 12.2,
                     "carbohydrate": 2.0,
                     "sugars": 0.0,
@@ -22,7 +24,8 @@
                     "caffeine": 204.2
                 },
                 {
-                    "size": "mega",
+                    "size": "Venti",
+                    "volume": "680ml",
                     "calorie": 16.7,
                     "carbohydrate": 1.6,
                     "sugars": 0.0,
@@ -33,6 +36,87 @@
                     "transfat": 0.0,
                     "saturatedfat": 0.0,
                     "caffeine": 290.8
+                }
+            ]
+        }
+    },
+    "2": {
+        "name": "따끈따끈 베이커리",
+        "en_name": "Korean Streats Dessert Pack",
+        "category": "food",
+        "thumbnail": "https://firebasestorage.googleapis.com/v0/b/mocatmall.appspot.com/o/bread_pack.png?alt=media&token=1a819e37-5eb9-4e43-87e9-2cdfa7911bac",
+        "detail": {
+            "description": "겨울 대표 간식 팥&슈크림 붕어빵과\n앙버터호두과자, 꿀을 가득 머금은\n미니호떡으로 구성된 돌아온\n따끈따끈 간식꾸러미",
+            "price": 12000,
+            "allergys": [],
+            "nutritions": [
+                {
+                    "size": "default",
+                    "volume": "140g",
+                    "calorie": 521.79,
+                    "carbohydrate": 0.0,
+                    "sugars": 33.54,
+                    "salt": 270.12,
+                    "protein": 8.25,
+                    "fat": 0.0,
+                    "cholesterol": 0.0,
+                    "transfat": 0.0,
+                    "saturatedfat": 7.88,
+                    "caffeine": 0.0
+                }
+            ]
+        }
+    }, 
+    "3": {
+        "name": "흑당버블밀크티라떼",
+        "en_name": "Brown Sugar Bubble Milktea Latte",
+        "category": "drink",
+        "thumbnail": "https://firebasestorage.googleapis.com/v0/b/mocatmall.appspot.com/o/darksugarbublemilktea.jpg?alt=media&token=8523d183-6538-480c-a1ab-8e56ca08d12e",
+        "detail": {
+            "description": "타바론 얼그레이 홍차의 깊은 맛을 살린 일크티 라떼에 진한 흑당과 흑당 버블의 달콤함을 채운 음료.",
+            "price": 3800,
+            "allergys": ["우유"],
+            "nutritions": [
+                {
+                    "size": "Grande",
+                    "volume": "591ml",
+                    "calorie": 330.2,
+                    "carbohydrate": 59.9,
+                    "sugars": 24.4,
+                    "salt": 106.7,
+                    "protein": 7.6,
+                    "fat": 6.7,
+                    "cholesterol": 23.5,
+                    "transfat": 0.2,
+                    "saturatedfat": 4.3,
+                    "caffeine": 14.3
+                }
+            ]
+        }
+    },
+    "4": {
+        "name": "콜드브루오리지널",
+        "en_name": "Coldbrew",
+        "category": "drink",
+        "thumbnail": "https://firebasestorage.googleapis.com/v0/b/mocatmall.appspot.com/o/coldbrew.jpg?alt=media&token=4779d5ee-70b8-41b9-9345-a524063f1cf2",
+        "detail": {
+            "description": "차가운 물에 장시간 우려내 깔끔한 목넘김을 느낄 수 있는 콜드브루.",
+            "price": 3300,
+            "allergys": ["우유"],
+            "nutritions": [
+                {
+                    "size": "Grande",
+                    "volume": "591ml",
+                    "calorie": 7.2,
+                    "carbohydrate": 0.5,
+                    "sugars": 0.0,
+                    "salt": 0.4,
+                    "protein": 0.8,
+                    "fat": 0.0,
+                    "cholesterol": 0.0,
+                    "transfat": 0.0,
+                    "saturatedfat": 0.2,
+                    "caffeine": 156.4
                 }
             ]
         }

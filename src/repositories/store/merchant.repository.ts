@@ -70,13 +70,14 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
                 store: {
                     create: {
                         uuid: args.uuids.store,
+                        imp_uid: args.createData.imp_uid,
                         address: args.createData.storeinfo.address,
                         location: {
                             latitude: 0,
                             longitude: 0,
                         },
                         storename: args.createData.storeinfo.storename,
-                        thumbnail: args.createData.storeinfo.thubmnail,
+                        thumbnail: args.createData.storeinfo.thumbnail,
                         detail: {
                             create: {
                                 images: args.createData.storeinfo.detail.images,
@@ -109,6 +110,19 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
                                 uuid: args.uuids.wallet
                             }
                         }
+                    }
+                }
+            },
+            include: {
+                store: {
+                    select: {
+                        uuid: true,
+                        imp_uid: true,
+                        address: true,
+                        location: true,
+                        storename: true,
+                        thumbnail: true,
+                        detail: {select: { id: true }},
                     }
                 }
             }
@@ -153,14 +167,14 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
     }
 
     async updateSalesBy(
-        updateDate: Partial<Omit<SalesEntity, "id">>,
+        updateDate: Partial<Omit<SalesEntity, "uuid">>,
         args: {
-        salesId: number
+        salesId: string
         walletUUID: string,
     }) :
     Promise<SalesEntity> {
         return this.parsingSalesEntity(await this.prisma.sales.upsert({
-            where: { id: args.salesId },
+            where: { uuid: args.salesId },
             update: {
                 amounts: updateDate.amounts,
                 menus: updateDate.menus,

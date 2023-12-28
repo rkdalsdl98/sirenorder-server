@@ -18,7 +18,7 @@ export class AuthService {
      * @param salt? 
      * @returns Object { salt: string, hash: string }
      */
-    encryption(data: Object, salt?: string) : { salt: string, hash: string } {
+    encryption(data: Object, salt?: string, len?: number) : { salt: string, hash: string } {
         const bufferEncoding : BufferEncoding | undefined = this.config.get<string>("AUTH_BUFFER_ENCODING") as BufferEncoding
         const encoding : BufferEncoding | undefined = this.config.get<string>("AUTH_ENCODING") as BufferEncoding
         const interation : number | undefined = parseInt(this.config.get<string>("AUTH_ITERATION") ?? "10000")
@@ -36,7 +36,7 @@ export class AuthService {
             buffer, 
             salt, 
             interation, 
-            keyLen, 
+            len ?? keyLen, 
             algorithm,
         ).toString(encoding ?? "base64")
         
@@ -70,11 +70,13 @@ export class AuthService {
      */
     getRandUUID() : string { return v4() }
     /**
-     * 6자리 랜덤 문자열 반환
-     * @param byteLen 
+     * 랜덤 문자열 반환
+     * 
+     * 기본 문자열 길이 값 6
+     * @param len 
      * @returns Rand code
      */
-    generateRandStr() : string {
-        return randomBytes(32).toString("base64").substring(0, 6)
+    generateRandStr(len?: number) : string {
+        return randomBytes(32).toString("base64").substring(0, len ?? 6)
     }
 }

@@ -5,7 +5,7 @@ import { EmailService } from "./mail.service";
 import { AuthService } from "./auth.service";
 import { ConfigService } from "@nestjs/config";
 import { ERROR } from "../common/type/response.type";
-import { UserEntity } from "../repositories/user/user.entity";
+import { OrderHistory, UserEntity } from "../repositories/user/user.entity";
 import { UserDto } from "src/dto/user.dto";
 
 @Injectable()
@@ -16,13 +16,11 @@ export class UserService {
         private readonly email: EmailService,
         private readonly auth: AuthService,
         private readonly config: ConfigService,
-    ){
-        this._initialized()
-    }
+    ){ this._initialized() }
 
     private async _initialized() :
     Promise<void> {
-        const users = await this.userRepository.getMany()
+        const users = (await this.userRepository.loadUsers())
         await this.redis.set("users", users, UserService.name)
         .then(_=> Logger.log("유저정보 인 메모리 캐싱"))
         .catch(err => {
@@ -38,7 +36,7 @@ export class UserService {
      * @param nickname 
      * @returns boolean
      */
-    async registUser(email: string, pass: string, nickname: string) :
+    async publishCode(email: string, pass: string, nickname: string) :
     Promise<boolean> {
         const { salt, hash } = this.auth.encryption({ pass })
         const code = this.auth.generateRandStr()
@@ -77,9 +75,33 @@ export class UserService {
             error.substatus = "NotValidCode"
             throw error
         }
-        const createdUser = await this.userRepository.create({ ...data, uuid: this.auth.getRandUUID() })
+
+        await this.redis.delete(code, UserService.name)
+        .then(async _=> {
+            await this.redis.set(
+                data.email, 
+                data, 
+                UserService.name,
+                600,
+            )
+        })
+        return true
+    }
+    
+    async registUser(email: string) :
+    Promise<boolean> {
+        const data = await this.redis.get<{ salt: string, hash: string, nickname: string, email: string }>(email, UserService.name)
+        if(data === null) {
+            var error = ERROR.NotFoundData
+            throw error
+        }
+        const createdUser = await this.userRepository.create({ 
+            ...data, 
+            uuid: this.auth.getRandUUID(), 
+            wallet_uid: this.auth.getRandUUID(), 
+        })
         await this._upsertCache(createdUser)
-        .then(async _=> await this.redis.delete(code, UserService.name))
+        .then(async _=> await this.redis.delete(email, UserService.name))
         
         return true
     }
@@ -101,13 +123,23 @@ export class UserService {
         if(isVerify) {
             // accesstoken과 refreshtoken 발행
             const { accesstoken, refreshtoken } = await this._publishTokens(findUser.email)
-            const user = await this.userRepository.updateBy({
+            await this.userRepository.updateBy({
                 accesstoken: accesstoken,
                 refreshtoken: refreshtoken,
             }, findUser.email)
-
-            await this._upsertCache(user)
-            return { ...user } as UserDto
+            await this._upsertCache(findUser)
+            return { 
+                tel: findUser.tel,
+                email: findUser.email,
+                nickname: findUser.nickname,
+                wallet: findUser.wallet,
+                gifts: findUser.gifts,
+                coupons: findUser.coupons,
+                orderhistory: findUser.orderhistory,
+                createdAt: findUser.createdAt,
+                updatedAt: findUser.updatedAt,
+                accesstoken: findUser.accesstoken,
+            } as UserDto
         }
         var error = ERROR.UnAuthorized
         error.substatus = "NotEqualPass"
@@ -169,6 +201,11 @@ export class UserService {
             error.substatus = "ForgeryData"
             throw error
         }
+    }
+
+    async getOrderHistory(email: string) 
+    : Promise<OrderHistory[]> {
+        return await this.userRepository.getOrderHistory(email)
     }
 
     async deleteUser(email: string) {
@@ -260,19 +297,44 @@ export class UserService {
             Logger.error("캐시로드오류")
             throw err
         }))?.find(c => c.email === email)
-
         if(cache !== undefined) {
             // 레디스에서 가져온 Date 타입이 string 타입으로 바꿔 반환해주기 때문에
             // Date로 변환 해줌
             // .toString()으로 string 타입 변환해주는 이유는
             // 반환 타입이 Date로 출력되지만 Date타입 변수에 넣어주면 타입 오류반환함
+            const coupons = cache.coupons.map(coupon => {
+                return {
+                    ...coupon,
+                    expiration_period: this._stringToDate(coupon.expiration_period.toString()),
+                }
+            })
+            const gifts = cache.gifts.map(gift => {
+                return {
+                    ...gift,
+                    coupon: {
+                        ...gift.coupon,
+                        expiration_period: this._stringToDate(
+                            gift.coupon.expiration_period.toString()
+                        ),
+                    }
+                }
+            })
+            const histories = cache.orderhistory.map(history => ({
+                ...history,
+                order_date: this._stringToDate(history.order_date.toString()),
+            }) as OrderHistory)
             const dates = this._stringToDate([
                 cache.createdAt.toString(),
                 cache.updatedAt.toString(),
             ])
             cache.createdAt = dates[0]
             cache.updatedAt = dates[1]
-            return cache
+            return {
+                ...cache,
+                gifts,
+                coupons,
+                orderhistory: histories,
+            } as UserEntity
         }
         return await this.userRepository.getBy({ email })
         .catch(err => {

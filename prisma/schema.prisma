@@ -17,9 +17,10 @@ model user {
   nickname String
   pass String
   salt String
+  tel String @default("000-0000-0000")
   wallet wallet? @relation("UserWallet")
   gifts gift[] @relation("Gift")
-  coupons String[]
+  coupons Json[]
   orderhistory Json[]
   accesstoken String?
   refreshtoken String?
@@ -37,9 +38,14 @@ model wallet {
 
 model gift {
   uuid String @id
-  coupon String
+  message String
+  coupon Json
   to String
   from String
+  menu Json
+  imp_uid String
+  order_uid String
+  used Boolean @default(false)
   wrappingtype String @default("default")
   user user @relation("Gift", references: [email], fields: [user_email], onDelete: Cascade)
   user_email String
@@ -53,9 +59,10 @@ model coupon {
 
 model order {
   uuid String @id
+  imp_uid String
   saleprice Int @default(0)
   totalprice Int @default(0)
-  deliveryinfo Json
+  deliveryinfo Json[]
   store_uid String
   menus Json[]
 }
@@ -69,6 +76,7 @@ model merchant {
 
 model store {
   uuid String @id
+  imp_uid String
   storename String
   thumbnail String?
   location Json
@@ -103,25 +111,26 @@ model storewallet {
 }
 
 model sales {
-  id Int @id @default(autoincrement())
+  uuid String @id @default(cuid())
   amounts Int @default(0)
   menus Json[]
-  salesdate String
+  salesdate DateTime @default(now())
   currwallet storewallet @relation("Sales", references: [uuid], fields: [wallet_uid], onDelete: Cascade)
-  wallet_uid String @unique
+  wallet_uid String
 }
 
 model menu {
   id Int @id @default(autoincrement())
   name String
   en_name String
-  price Int @default(0)
   thumbnail String
+  category String @default("notdefined")
   detail menudetail? @relation("MenuDetail")
 }
 
 model menudetail {
   id Int @id @default(autoincrement())
+  price Int @default(0)
   description String?
   allergys String[]
   menu menu @relation("MenuDetail", fields: [menu_id], references: [id], onDelete: Cascade)
@@ -132,6 +141,7 @@ model menudetail {
 model nutrition {
   id Int @id @default(autoincrement())
   size String
+  volume String
   calorie Decimal @default(0.0)
   carbohydrate Decimal @default(0.0)
   sugars Decimal @default(0.0)

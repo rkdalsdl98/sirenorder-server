@@ -4,9 +4,10 @@ import { PrismaService } from "../../services/prisma.service";
 import { LatLng, StoreEntity } from "./store.entity";
 import { ERROR } from "../../common/type/response.type";
 import { StoreDetailEntity, WeeklyHours } from "./storedetail.entity";
-import { OrderEntity } from "../user/order.entity";
-import { MenuInfo } from "src/common/type/order.typs";
+import { DeliveryInfo, OrderEntity } from "../user/order.entity";
+import { MenuInfo } from "src/common/type/order.type";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { OrderHistory } from "../user/user.entity";
 
 @Injectable()
 export class StoreRepository implements IRepository<StoreEntity, StoreDetailEntity>  {
@@ -32,6 +33,21 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
         })).map(o => this.parsingOrderEntity(o))
     }
 
+    async addOrderHistory(buyer_email: string, history: OrderHistory)
+    : Promise<boolean> {
+        return !!(await this.prisma.user.update({
+            where: { email: buyer_email },
+            data: {
+                orderhistory: {
+                    push: { ...history }
+                }
+            }
+        }).catch(err => {
+            Logger.error("주문내역 업데이트에 실패했습니다.")
+            throw ERROR.ServerDatabaseError
+        }))
+    }
+
     async getMany(): Promise<StoreEntity[]> {
         return (await this.prisma.store.findMany({ 
             include: { detail: { select: { id: true }} }
@@ -43,19 +59,64 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
 
     async createOrder(order: OrderEntity)
     : Promise<OrderEntity> {
-        return this.parsingOrderEntity(await this.prisma.order.create({
-            data: {
-                store_uid: order.store_uid,
-                uuid: order.uuid,
-                deliveryinfo: order.deliveryinfo,
-                menus: order.menus,
-                saleprice: order.saleprice,
-                totalprice: order.totalprice,
-            }
-        }).catch(err => {
-            Logger.error("데이터를 갱신하는데 실패했습니다.", err.toString(), StoreRepository)
-            throw ERROR.ServerDatabaseError
-        }))
+        return await this.prisma.$transaction<OrderEntity>(async tx => {
+            const createdOrder = this.parsingOrderEntity(await tx.order.create({
+                data: {
+                    store_uid: order.store_uid,
+                    imp_uid: order.imp_uid,
+                    uuid: order.uuid,
+                    deliveryinfo: order.deliveryinfo,
+                    menus: order.menus,
+                    saleprice: order.saleprice,
+                    totalprice: order.totalprice,
+                }
+            }).catch(err => {
+                Logger.error("데이터를 갱신하는데 실패했습니다.", err.toString(), StoreRepository)
+                throw ERROR.ServerDatabaseError
+            }))
+            await tx.store.update({
+                where: { uuid: order.store_uid },
+                data: {
+                    wallet: {
+                        update: {
+                            sales: {
+                                create: {
+                                    amounts: order.totalprice,
+                                    menus: order.menus,
+                                }
+                            }
+                        }
+                    }
+                }
+            }).catch(async storeError => {
+                await tx.order.delete({
+                    where: { uuid: order.uuid }
+                })
+                .catch(orderError => {
+                    if(orderError instanceof PrismaClientKnownRequestError) {
+                        switch(orderError.code) {
+                            case "P2025":
+                                Logger.error("주문정보를 찾을 수 없어 삭제에 실패했습니다.", orderError.toString(), StoreRepository)
+                                break
+                            default: 
+                                Logger.error("데이터를 삭제하는데 실패했습니다.", orderError.toString(), StoreRepository)
+                                break
+                        }
+                    }
+                })
+                
+                if(storeError instanceof PrismaClientKnownRequestError) {
+                    switch(storeError.code) {
+                        case "P2025":
+                            Logger.error("가게정보를 찾을 수 없어 주문내역 갱신을 실패했습니다.", storeError.toString(), StoreRepository)
+                            throw ERROR.NotFoundData
+                    }
+                }
+                Logger.error("가게 주문내역 갱신을 실패했습니다.", storeError.toString(), StoreRepository)
+                throw ERROR.ServerDatabaseError
+            })
+            return createdOrder
+        })
     }
 
     async deleteOrder(orderId: string): Promise<OrderEntity> {
@@ -80,6 +141,7 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
     parsingEntity(e) : StoreEntity {
         return {
             uuid: e.uuid,
+            imp_uid: e.imp_uid,
             storename: e.storename,
             thumbnail: e.thumbnail,
             location: e.location as LatLng,

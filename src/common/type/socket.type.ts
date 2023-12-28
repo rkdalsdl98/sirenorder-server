@@ -24,6 +24,7 @@ export type RoomleaveOptions = {
 export type RoomJoinOptions = {
     socketId?: string
     readonly storeId: string
+    readonly imp_uid: string
     readonly storename: string
     readonly thumbnail?: string
     readonly location?: LatLng
