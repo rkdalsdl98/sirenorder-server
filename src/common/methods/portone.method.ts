@@ -25,7 +25,7 @@ export namespace PortOneMethod {
         if(!order) {
             var err = ERROR.NotFoundData
             err.substatus = "OrderLookupFailed"
-            throw order
+            throw err
         }
 
         return order;
@@ -88,6 +88,8 @@ export namespace PortOneMethod {
             store_thumbnail: store.thumbnail,
             store_uid: store.storeId,
             totalprice: order.totalprice,
+            deliveryinfo: order.deliveryinfo,
+            order_date: new Date(Date.now()),
         })
         
         return order.buyer_email

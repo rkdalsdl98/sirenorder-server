@@ -14,18 +14,19 @@ export class CouponController {
     constructor(
         private readonly couponService: CouponService,
     ){}
-
-    @TypedRoute.Post()
-    async useCoupon(
-        @TypedQuery() query: CouponQuery.CouponQueryUseOptions,
-    ) 
+    
+    @TypedRoute.Post("register")
+    async registerCoupon(
+        @TypedQuery() query: CouponQuery
+    )
     : Promise<TryCatch<
-    boolean,
+    SimpleCouponEntity,
+    | typeof ERROR.NotFoundData
     | typeof ERROR.ServerDatabaseError
     | typeof ERROR.ServiceUnavailableException
     >> {
         try {
-            const result = await this.couponService.useCoupon(
+            const result = await this.couponService.registerCoupon(
                 query.user_email,
                 query.code,
             )
@@ -36,13 +37,6 @@ export class CouponController {
         } catch(e) { return e }
     }
 
-    @TypedRoute.Post("gift")
-    async useGiftCoupon() {
-        try {
-            
-        } catch(e) { return e }
-    }
-
     @TypedRoute.Post("publish")
     @UseGuards(CouponGuard)
     async publishCoupon(
@@ -50,7 +44,7 @@ export class CouponController {
         @TypedBody() body: CouponBody.CouponBodyPublishBody,
     ) 
     : Promise<TryCatch<
-    | SimpleCouponEntity
+    | string
     | null,
     | typeof ERROR.NotFoundData
     | typeof ERROR.ServerDatabaseError
@@ -63,8 +57,7 @@ export class CouponController {
                     status: 202
                 }
                 
-                const result = await this.couponService.publishCoupon(body.user_email, 
-                    {
+                const result = await this.couponService.publishCoupon({
                     menuinfo: body.menuinfo,
                     expiration_day: body.expiration_day,
                 })
@@ -81,7 +74,7 @@ export class CouponController {
     @UseGuards(CouponGuard)
     async deleteCoupon(
         @AuthDecorator.IsValidCoupon() data: boolean | FailedResponse,
-        @TypedQuery() query: { code: string, user_email: string }
+        @TypedQuery() query: CouponQuery.CouponQueryDeleteOptions
     ) : Promise<TryCatch<
     boolean,
     | typeof ERROR.NotFoundData
@@ -94,7 +87,11 @@ export class CouponController {
                     data,
                     status: 202
                 }
-                const result = await this.couponService.deleteCoupon(query.user_email, query.code)
+                const result = await this.couponService.deleteCoupon({
+                    user_email: query.user_email,
+                    code: query.code,
+                    message: query.message,
+                })
 
                 return {
                     data: result,

@@ -111,12 +111,12 @@ model storewallet {
 }
 
 model sales {
-  id Int @id @default(autoincrement())
+  uuid String @id @default(cuid())
   amounts Int @default(0)
   menus Json[]
   salesdate DateTime @default(now())
   currwallet storewallet @relation("Sales", references: [uuid], fields: [wallet_uid], onDelete: Cascade)
-  wallet_uid String @unique
+  wallet_uid String
 }
 
 model menu {

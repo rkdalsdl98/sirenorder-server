@@ -14,8 +14,8 @@ export interface UserEntity {
     readonly gifts: GiftEntity[]
     readonly coupons: SimpleCouponEntity[]
     readonly orderhistory: OrderHistory[]
-    readonly accesstoken: string | null,
-    readonly refreshtoken: string | null,
+    readonly accesstoken: string | null
+    readonly refreshtoken: string | null
     createdAt: Date
     updatedAt: Date
 }
@@ -28,9 +28,9 @@ export type OrderHistory =
 NestiedType<Omit<OrderEntity, 
 | "uuid" 
 | "merchant_uid"
-| "deliveryinfo"
 > & { 
     store_uid: string, 
     store_name: string,
-    store_thumbnail?: string,
+    store_thumbnail?: string | null,
+    order_date: Date,
 }>

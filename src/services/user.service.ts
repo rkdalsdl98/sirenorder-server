@@ -319,6 +319,10 @@ export class UserService {
                     }
                 }
             })
+            const histories = cache.orderhistory.map(history => ({
+                ...history,
+                order_date: this._stringToDate(history.order_date.toString()),
+            }) as OrderHistory)
             const dates = this._stringToDate([
                 cache.createdAt.toString(),
                 cache.updatedAt.toString(),
@@ -329,39 +333,10 @@ export class UserService {
                 ...cache,
                 gifts,
                 coupons,
+                orderhistory: histories,
             } as UserEntity
         }
         return await this.userRepository.getBy({ email })
-        .then(user => {
-            const coupons = user.coupons.map(coupon => {
-                return {
-                    ...coupon,
-                    expiration_period: this._stringToDate(coupon.expiration_period.toString()),
-                }
-            })
-            const gifts = user.gifts.map(gift => {
-                return {
-                    ...gift,
-                    coupon: {
-                        ...gift.coupon,
-                        expiration_period: this._stringToDate(
-                            gift.coupon.expiration_period.toString()
-                        ),
-                    }
-                }
-            })
-            const dates = this._stringToDate([
-                user.createdAt.toString(),
-                user.updatedAt.toString(),
-            ])
-            user.createdAt = dates[0]
-            user.updatedAt = dates[1]
-            return {
-                ...user,
-                gifts,
-                coupons,
-            } as UserEntity
-        })
         .catch(err => {
             Logger.error("유저 정보조회 실패") 
             throw err

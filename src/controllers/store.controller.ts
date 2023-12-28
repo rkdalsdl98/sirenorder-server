@@ -3,9 +3,8 @@ import { Controller, Logger } from "@nestjs/common";
 import { ERROR, TryCatch } from "../common/type/response.type";
 import { StoreDetailDto, StoreDto } from "../dto/store.dto";
 import { StoreService } from "../services/store.service";
-import { PortOneRequest, StoreQuery } from "src/query/store.query";
+import { PortOneRequest, StoreBody, StoreQuery } from "src/query/store.query";
 import { OrderEntity } from "src/repositories/user/order.entity";
-import { OrderState } from "src/common/type/order.type";
 
 @Controller('store')
 export class StoreController {
@@ -60,20 +59,26 @@ export class StoreController {
         } catch (e) { return e }
     }
 
-    @TypedRoute.Get("order/state")
-    async getOrderState(
-        @TypedQuery() query: StoreQuery.StoreQueryGetOrderStateOptions
-    ) : Promise<TryCatch<
-    OrderState | null,
-    | typeof ERROR.ServerCacheError
+    @TypedRoute.Post("order/coupon")
+    async useCoupon(
+        @TypedBody() body: StoreBody.StoreBodyUseCouponOptions
+    )
+    : Promise<TryCatch<
+    { message?: string, result: boolean },
     | typeof ERROR.NotFoundData
-    | typeof ERROR.ServiceUnavailableException
+    | typeof ERROR.ServerDatabaseError
+    | typeof ERROR.Accepted
     >> {
-        try {
-            const result = await this.storeService.getOrderState(query.order_uid)
+        try{
+            const result = await this.storeService.useCoupon(
+                body.storeId,
+                body.user_email,
+                body.code,
+                body.deliveryinfo,
+            )
             return {
                 data: result,
-                status: 200,
+                status: 201,
             }
         } catch(e) { return e }
     }

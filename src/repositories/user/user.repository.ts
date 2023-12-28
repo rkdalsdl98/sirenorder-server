@@ -2,7 +2,6 @@ import { Injectable, Logger } from "@nestjs/common";
 import { IRepository } from "../../common/interface/irepository";
 import { PrismaService } from "../../services/prisma.service";
 import { OrderHistory, UserEntity } from "./user.entity";
-import { MenuInfo } from "../../common/type/order.type";
 import { ERROR } from "../../common/type/response.type";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { WalletEntity } from "./wallet.entity";
@@ -15,6 +14,19 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
     constructor(
         private readonly prisma: PrismaService
     ){}
+
+    // async test() {
+    //     const primary: Prisma.DMMF.Field | undefined =
+    //     Prisma.dmmf.datamodel.models
+    //       .find((model) => model.name === "user")
+    //       ?.fields.find((field) => field.isId === true)
+    //     console.log(primary)
+    //     if(primary) {
+    //         const res = 
+    //         await (new PrismaClient()["user"] as any).findMany();
+    //         console.log(res)
+    //     }
+    // }
 
     async loadUsers()
     : Promise<UserEntity[]> {
@@ -48,9 +60,10 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
                     }
                     return true
                 })
+
                 const gifts = user.gifts.map(gift => {
                     const giftExpiration = new Date(gift.coupon.expiration_period)
-                    if(giftExpiration < now) {
+                    if(giftExpiration < now && !gift.used) {
                         gift.used = true
                         needUpdate = true
                     }
@@ -61,11 +74,13 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
                     coupons,
                     gifts,
                 } as UserEntity
-                needUpdateUsers[`${filterdUser.uuid}`] = filterdUser
+                if(needUpdate) {
+                    needUpdateUsers[`${filterdUser.uuid}`] = filterdUser
+                }
                 return filterdUser
             })
 
-            for(var uuid in needUpdateUsers.keys) {
+            for(var uuid in needUpdateUsers) {
                 const user = needUpdateUsers[uuid]
                 await tx.user.update({
                     where: { uuid },
@@ -229,6 +244,8 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
             store_uid: e.store_uid,
             store_thumbnail: e.store_thumbnail,
             totalprice: e.totalprice,
+            deliveryinfo: e.deliveryinfo,
+            order_date: e.order_date,
         } as OrderHistory
     }
 
@@ -262,10 +279,12 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
                     imp_uid: e.orderhistory[key]["imp_uid"],
                     saleprice: e.orderhistory[key]["saleprice"],
                     totalprice: e.orderhistory[key]["totalprice"],
-                    menus: e.orderhistory[key]["menus"].map(m => m as MenuInfo),
+                    menus: e.orderhistory[key]["menus"],
+                    deliveryinfo: e.orderhistory[key]["deliveryinfo"],
                     store_uid: e.orderhistory[key]["store_uid"],
                     store_name: e.orderhistory[key]["store_name"],
                     store_thumbnail: e.orderhistory[key]["store_thumbnail"],
+                    order_date:e.orderhistory[key]['order_date'],
                 } as OrderHistory
             }),
             accesstoken: e.accesstoken,
@@ -273,13 +292,5 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
             createdAt: e.createdAt,
             updatedAt: e.updatedAt
         }
-    }
-
-    private stringToDate(str: string | string[]) : 
-    | Date
-    | Date[] {
-        return Array.isArray(str) 
-        ? str.map(s => new Date(s))
-        : new Date(str)
     }
 }

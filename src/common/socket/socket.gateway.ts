@@ -24,8 +24,7 @@ import { StoreRepository } from "src/repositories/store/store.repository";
 import { PortOneMethod } from "../methods/portone.method";
 import { OrderState, RefuseOrder } from "../type/order.type";
 import { SSEService } from "src/services/sse.service";
-import { GiftNotifySubject, NotifyType, OrderNotifySubject, ServerNotifySubject } from "../type/sse.type";
-import { SimpleCouponEntity } from "src/repositories/coupon/coupon.entity";
+import { GiftNotifySubject, OrderNotifySubject } from "../type/sse.type";
 import { GiftEntity } from "src/repositories/user/gift.entity";
 
 dotenv.config()
@@ -111,7 +110,6 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
                 redis: this.redis,
                 order_uid: data,
             })
-            await this.storeRepository.deleteOrder(data)
             return {
                 result: false,
                 message: "fail",

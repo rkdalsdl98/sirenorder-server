@@ -5,19 +5,21 @@ import { RedisService } from "./redis.service";
 import { StoreEntity } from "src/repositories/store/store.entity";
 import { RoomJoinOptions } from "src/common/type/socket.type";
 import { SocketGateWay } from "src/common/socket/socket.gateway";
-import { OrderEntity } from "src/repositories/user/order.entity";
+import { DeliveryInfo, OrderEntity } from "src/repositories/user/order.entity";
 import { ERROR } from "src/common/type/response.type";
 import { OrderDto } from "src/dto/user.dto";
 import { PortOneMethod } from "src/common/methods/portone.method";
-import { OrderInfo, OrderState, RegisteredOrder } from "src/common/type/order.type";
+import { OrderInfo, RegisteredOrder } from "src/common/type/order.type";
 import { CouponService } from "./coupon.service";
 import { GiftInfo } from "src/common/type/gift.type";
+import { AuthService } from "./auth.service";
 
 @Injectable()
 export class StoreService {
     constructor(
         private readonly storeRepository: StoreRepository,
         private readonly couponService: CouponService,
+        private readonly authService: AuthService,
         private readonly redis: RedisService,
         private readonly socket: SocketGateWay,
     ){ this._initialized() }
@@ -61,7 +63,6 @@ export class StoreService {
             case "order":
                 await this.sendOrder({
                     order_uid,
-                    imp_uid,
                     order,
                 })
                 break
@@ -72,6 +73,55 @@ export class StoreService {
                     order,
                 })
                 break
+        }
+    }
+
+    async useCoupon(
+        storeId: string,
+        user_email: string, 
+        code: string,
+        deliveryinfo: DeliveryInfo,
+    ) : Promise<{ message?: string, result: boolean }> {
+        const socketId = await this._isOpenStore(storeId)
+        if(!socketId || socketId === undefined) {
+            return {
+                message: "영업중인 매장이 아닙니다.",
+                result: false,
+            }
+        }
+        const useResult = await this.couponService.useCoupon(
+            user_email,
+            code,
+        )
+        if(typeof useResult.result === "boolean") {
+            return {
+                message: useResult.message,
+                result: useResult.result,
+            }
+        } else {
+            const randUUID = this.authService.getRandUUID()
+            const order: RegisteredOrder = {
+                deliveryinfo: [deliveryinfo],
+                imp_uid: randUUID.substring(0, 12),
+                menus: [useResult.result.menuinfo],
+                saleprice: 0,
+                store_uid: storeId,
+                totalprice: useResult.result.menuinfo.price,
+                uuid: randUUID,
+                buyer_email: user_email,
+                state: "wait",
+            }
+            await this.redis.set(order.uuid, order, StoreService.name)
+            .catch(err => {
+                this._refuseOrder(order.uuid)
+                Logger.error("주문정보 캐싱 실패", StoreService.name)
+                this.socket.pushStateMessage(user_email, "refuse")
+                throw err
+            })
+            const result = this.socket.sendOrder(socketId, order)
+            if(result) this.socket.pushStateMessage(user_email, "wait")
+            else this.socket.pushStateMessage(user_email, "refuse")
+            return { result }
         }
     }
 
@@ -123,11 +173,9 @@ export class StoreService {
     // 주문취소 루틴에 주문번호를 넣어 캐시데이터만 삭제처리 하도록 해두었음
     async sendOrder({
         order_uid,
-        imp_uid,
         order,
     } : {
         order_uid: string,
-        imp_uid: string,
         order: OrderDto,
     })
     : Promise<boolean> {
@@ -151,7 +199,7 @@ export class StoreService {
 
             const { menus, deliveryinfo } = orderInfo
             const orderEntity = {
-                uuid: order.merchant_uid,
+                uuid: order_uid,
                 imp_uid: order.imp_uid,
                 saleprice: 0,
                 totalprice: order.amount,
@@ -166,6 +214,7 @@ export class StoreService {
             .catch( err => {
                 this._refuseOrder(order_uid)
                 Logger.error("주문정보 캐싱 실패", StoreService.name)
+                this.socket.pushStateMessage(order.buyer_email!, "refuse")
                 throw err
             })
             result = this.socket.sendOrder(store.socketId, orderEntity)
@@ -199,15 +248,10 @@ export class StoreService {
         return await this._getStores()
     }
 
-    async getOrderState(order_uid: string)
-    : Promise<OrderState> {
-        const order = await this.redis.get<RegisteredOrder>(
-            order_uid,
-            StoreService.name,
-        )
-        if(order === null) return "refuse"
-        
-        return order.state
+    private async _isOpenStore(storeId: string)
+    : Promise<string | undefined | null> {
+        return (await this.redis.get<RoomJoinOptions[]>("stores", CouponService.name))
+        ?.find(store => store.storeId === storeId)?.socketId
     }
 
     private _equalUUIds(

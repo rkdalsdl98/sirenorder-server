@@ -167,14 +167,14 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
     }
 
     async updateSalesBy(
-        updateDate: Partial<Omit<SalesEntity, "id">>,
+        updateDate: Partial<Omit<SalesEntity, "uuid">>,
         args: {
-        salesId: number
+        salesId: string
         walletUUID: string,
     }) :
     Promise<SalesEntity> {
         return this.parsingSalesEntity(await this.prisma.sales.upsert({
-            where: { id: args.salesId },
+            where: { uuid: args.salesId },
             update: {
                 amounts: updateDate.amounts,
                 menus: updateDate.menus,

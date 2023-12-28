@@ -1,15 +1,18 @@
 import { MenuInfo } from "src/common/type/order.type";
+import { tags } from "typia"
 
+export interface CouponQuery {
+    readonly user_email: string & tags.Format<"email">
+    readonly code: string & tags.MaxLength<12>
+}
 export namespace CouponQuery {
-    export interface CouponQueryUseOptions {
-        readonly user_email: string
-        readonly code: string
+    export interface CouponQueryDeleteOptions extends CouponQuery {
+        readonly message: string
     }
 }
 
 export namespace CouponBody {
     export interface CouponBodyPublishBody {
-        readonly user_email: string
         readonly menuinfo: MenuInfo
         readonly expiration_day?: number
     }

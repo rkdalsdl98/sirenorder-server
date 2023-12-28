@@ -36,5 +36,5 @@ NestedType<OrderEntity
 
 export type OrderInfo = {
     readonly menus: MenuInfo[]
-    readonly deliveryinfo: DeliveryInfo
+    readonly deliveryinfo: DeliveryInfo[]
 }

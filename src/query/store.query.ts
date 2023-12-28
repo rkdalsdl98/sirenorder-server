@@ -1,5 +1,6 @@
 import { MenuInfo } from "src/common/type/order.type"
 import { DeliveryInfo } from "src/repositories/user/order.entity"
+import { tags } from "typia"
 
 export namespace StoreQuery {
     export interface StoreQueryGetStoreDetailOptions {
@@ -17,6 +18,15 @@ export namespace StoreQuery {
     }
     export interface StoreQueryGetOrderStateOptions {
         readonly order_uid: string
+    }
+}
+
+export namespace StoreBody {
+    export interface StoreBodyUseCouponOptions {
+        readonly user_email: string & tags.Format<"email">
+        readonly code: string & tags.MaxLength<12>
+        readonly storeId: string
+        readonly deliveryinfo: DeliveryInfo
     }
 }
 

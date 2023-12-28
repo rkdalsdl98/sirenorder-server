@@ -9,6 +9,7 @@ export type NotifyType =
 | "main-notify"
 | "gift-notify"
 | "order-notify"
+| "user-notify"
 export type ServerNotifySubject = {
     readonly message: string
     readonly title: string
@@ -19,6 +20,11 @@ export type OrderNotifySubject = {
 }
 export type GiftNotifySubject = {
     readonly gift: GiftEntity
+}
+export type UserNotifySubject = {
+    readonly receiver_email: string & tags.Format<"email">
+    readonly message: string
+    readonly title: string
 }
 export type NotifySubject = ServerNotifySubject | OrderNotifySubject | GiftNotifySubject
 export type SSESubject = {

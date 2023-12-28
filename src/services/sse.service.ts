@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Observable, Subject, filter, map } from "rxjs";
 import { RedisService } from "./redis.service";
-import { GiftNotifySubject, Notifier, OrderNotifySubject, SSESubject } from "src/common/type/sse.type";
+import { GiftNotifySubject, Notifier, OrderNotifySubject, SSESubject, UserNotifySubject } from "src/common/type/sse.type";
 import { ERROR } from "src/common/type/response.type";
 
 @Injectable()
@@ -53,6 +53,12 @@ export class SSEService {
             case "main-notify":
             case "update-notify":
                 return true
+            case "user-notify":
+                const user_sub = data.subject as UserNotifySubject
+                return this.checkReceiver({
+                    receiver_email: user_sub.receiver_email,
+                    listener_email,
+                })
             case "gift-notify":
                 const gift_sub = data.subject as GiftNotifySubject
                 return this.checkReceiver({

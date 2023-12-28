@@ -1,14 +1,15 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { CouponRepository } from "src/repositories/coupon/coupon.repository";
 import * as dotenv from "dotenv"
 import { CouponEntity, CouponInfo, SimpleCouponEntity } from "src/repositories/coupon/coupon.entity";
-import { ERROR } from "src/common/type/response.type";
+import { ERROR, FailedResponse } from "src/common/type/response.type";
 import { RedisService } from "./redis.service";
 import { UserEntity } from "src/repositories/user/user.entity";
-import { OrderInfo } from "src/common/type/order.type";
 import { GiftInfo } from "src/common/type/gift.type";
 import { GiftEntity } from "src/repositories/user/gift.entity";
+import { SSEService } from "./sse.service";
+import { UserNotifySubject } from "src/common/type/sse.type";
 dotenv.config()
 
 const coupon_secret = process.env.COUPON_SECRET
@@ -20,6 +21,7 @@ const coupon_secret = process.env.COUPON_SECRET
 export class CouponService {
     constructor(
         private readonly auth: AuthService,
+        private readonly sseService: SSEService,
         private readonly couponRepoistory: CouponRepository,
         private readonly redis: RedisService,
     ){ this.couponRepoistory.deleteExpiredCoupon() }
@@ -30,63 +32,56 @@ export class CouponService {
     // => 암호화된 쿠폰코드발행 (길이 12)
     // 검증 루틴: 위조확인 => 쿠폰 탐색 => 기간확인 => 사용된 쿠폰정보 폐기
     // => 결과 반환
-
-    async publishCoupon(
-        current_user_email: string,
-        coupon_info: CouponInfo,
-    ) 
-    : Promise<SimpleCouponEntity> {
+    
+    async publishCoupon(coupon_info: CouponInfo) 
+    : Promise<string> {
         const code = this.auth.generateRandStr(12)
         const { hash } = this.auth.encryption(code, coupon_secret, 32)
         const expiration_period = this._createExpirationPeriod(coupon_info.expiration_day)
-        const coupon = await this.couponRepoistory.publishCoupon({
-            current_user_email,
+        const published = await this.couponRepoistory.publishCoupon({
             coupon: {
                 code: hash,
                 expiration_period,
                 menuinfo: coupon_info.menuinfo,
             },
-            coupon_code: code,
         })
-        .then(async coupon => {
-            await this._updateCouponFromUser(
-                current_user_email,
-                code,
-                coupon,
-            )
-            return coupon
-        })
+        if(!published) throw ERROR.ServiceUnavailableException
+        return code
+    }
 
-        return {
+    async registerCoupon(
+        current_user_email: string,
+        code: string,
+    )
+    : Promise<SimpleCouponEntity> {
+        const { coupon } = await this._validate(code)
+        const simple_data = {
             code,
-            expiration_period,
+            expiration_period: coupon.expiration_period,
             menu_name: coupon.menuinfo.name,
             thumbnail: coupon.menuinfo.thumbnail,
-        }
-    }
+        } as SimpleCouponEntity
+        const registered = await this.couponRepoistory.registerCoupon({
+            current_user_email,
+            coupon: simple_data,
+        })
+        if(!registered) throw ERROR.ServiceUnavailableException
 
-    private async _validate(code: string)
-    : Promise<string> {
-        const { hash } = this.auth.encryption(code, coupon_secret, 32)
-        const coupon = await this.couponRepoistory.getBy(hash)
-        const validate = this._checkExpirationPeriod(coupon.expiration_period)
-        if(!validate) {
-            var err = ERROR.BadRequest
-            err.substatus = "ExpiredCoupon"
-            throw err
-        }
-        return hash
-    }
-
-    async sendGift(giftInfo: GiftInfo) : Promise<GiftEntity> {
-        const coupon = await this.publishCoupon(
-            giftInfo.to,
-            {
-                menuinfo: giftInfo.menu,
-                expiration_day: 1,
-            }
+        await this._updateCouponFromUser(
+            current_user_email,
+            code,
+            coupon,
         )
+        return simple_data
+    }
 
+    
+    async sendGift(giftInfo: GiftInfo) : Promise<GiftEntity> {
+        const code = await this.publishCoupon({
+            menuinfo: giftInfo.menu,
+            expiration_day: 1,
+        })
+        const coupon = await this.registerCoupon(giftInfo.to, code)
         const gift_uid = this.auth.getRandUUID()
         await this.couponRepoistory.updateGift({
             uuid: gift_uid,
@@ -110,27 +105,63 @@ export class CouponService {
         gift_uid: string
     ) 
     : Promise<boolean> {
-        const hashCode = await this._validate(code)
+        const { hash } = await this._validate(code)
         return await this._deleteGift(
             user_email,
-            hashCode,
+            hash,
             gift_uid,
         )
     }
-
-    async useCoupon(user_email: string, code: string) 
-    : Promise<boolean> {
-        const hashCode = await this._validate(code)
-        const deleteCoupon = await this._deleteCoupon(user_email, code, hashCode)
-        return deleteCoupon
+            
+    async useCoupon(
+        user_email: string, 
+        code: string
+    ) 
+    : Promise<{ message: string, result: boolean | CouponEntity }> {
+        const { hash, coupon } = await this._validate(code)
+        try {
+            await this._deleteCoupon(
+                user_email, 
+                code, 
+                hash,
+            )
+            return {
+                message: "성공적으로 주문요청을 보냇습니다.",
+                result: coupon
+            }
+        } catch(e) {
+            return {
+                message: "쿠폰사용중 오류가 발생해 주문이 취소되었습니다.",
+                result: false,
+            }
+        }
     }
-
-    async deleteCoupon(user_email: string, code: string)
+                
+    async deleteCoupon(args :{
+        user_email: string,
+        code: string,
+        message: string,
+    })
     : Promise<boolean> {
-        const { hash } = this.auth.encryption(code, coupon_secret, 32)
-        return await this._deleteCoupon(user_email, code, hash)
+        const { hash } = this.auth.encryption(args.code, coupon_secret, 32)
+        this.sseService.pushMessage({
+            notify_type: "user-notify",
+            subject: {
+                message: args.message,
+                title: "쿠폰회수",
+                receiver_email: args.user_email,
+            } as UserNotifySubject
+        })
+        try{
+            await this._deleteCoupon(args.user_email, args.code, hash)
+            return true
+        } catch(e) {
+            const err = e as FailedResponse
+            Logger.log(`쿠폰회수를 실패했습니다.\n상태코드: ${err.status}\n사유: ${err.message}${err.substatus !== undefined ? `상태상세: ${err.substatus}` : ""}`)
+            return false
+        }
     }
-
+                    
     private async _deleteGift(
         user_email: string, 
         encryption_code: string, 
@@ -140,41 +171,56 @@ export class CouponService {
             user_email,
             encryption_code,
             gift_uid,
-        ).then(async _=> {
-            await this._removeGiftFromUser(user_email)
-            return true
-        })
+            ).then(async _=> {
+                await this._removeGiftFromUser(user_email)
+                return true
+            })
     }
 
+    private async _validate(code: string)
+    : Promise<{ hash: string, coupon: CouponEntity }> {
+        const { hash } = this.auth.encryption(code, coupon_secret, 32)
+        const coupon = await this.couponRepoistory.getBy(hash)
+        const validate = this._checkExpirationPeriod(coupon.expiration_period)
+        if(!validate) {
+            var err = ERROR.BadRequest
+            err.substatus = "ExpiredCoupon"
+            throw err
+        }
+        return {
+            hash,
+            coupon,
+        }
+    }
+        
     private async _deleteCoupon(
         user_email: string, 
         code: string,
         encryption_code: string,
     )
-    : Promise<boolean> {
-        return await this.couponRepoistory.deleteCoupon(
+    : Promise<void> {
+        await this.couponRepoistory.deleteCoupon(
             user_email, 
             code,
             encryption_code,
         )
-        .then(async _ => {
+        .then(async _=> {
             await this._removeCouponFromUser(
                 user_email,
                 code,
             )
-            return true
         })
     }
-
+    
     private _createExpirationPeriod(day?: number) : Date {
         return new Date(Date.now() + (((60 * 1000) * 60) * (24 * (day ?? 1))))
     }
-
+    
     private _checkExpirationPeriod(date: Date) : boolean {
         const now = new Date(Date.now())
         return now <= date
     }
-
+        
     private async _removeGiftFromUser(user_email: string)
     : Promise<void> {
         const caches = await this.redis.get<UserEntity[]>("users", CouponService.name)

@@ -59,17 +59,13 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
 
     async createOrder(order: OrderEntity)
     : Promise<OrderEntity> {
-        let deliveryinfos : DeliveryInfo[]
-        if(!Array.isArray(order.deliveryinfo)) {
-            deliveryinfos = [order.deliveryinfo]
-        } else deliveryinfos = order.deliveryinfo
         return await this.prisma.$transaction<OrderEntity>(async tx => {
             const createdOrder = this.parsingOrderEntity(await tx.order.create({
                 data: {
                     store_uid: order.store_uid,
                     imp_uid: order.imp_uid,
                     uuid: order.uuid,
-                    deliveryinfo: deliveryinfos,
+                    deliveryinfo: order.deliveryinfo,
                     menus: order.menus,
                     saleprice: order.saleprice,
                     totalprice: order.totalprice,
@@ -78,7 +74,6 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                 Logger.error("데이터를 갱신하는데 실패했습니다.", err.toString(), StoreRepository)
                 throw ERROR.ServerDatabaseError
             }))
-
             await tx.store.update({
                 where: { uuid: order.store_uid },
                 data: {
@@ -93,9 +88,31 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                         }
                     }
                 }
-            }).catch(async err => {
-                await this.deleteOrder(order.uuid)
-                Logger.error("가게 주문내역 갱신을 실패했습니다.", err.toString(), StoreRepository)
+            }).catch(async storeError => {
+                await tx.order.delete({
+                    where: { uuid: order.uuid }
+                })
+                .catch(orderError => {
+                    if(orderError instanceof PrismaClientKnownRequestError) {
+                        switch(orderError.code) {
+                            case "P2025":
+                                Logger.error("주문정보를 찾을 수 없어 삭제에 실패했습니다.", orderError.toString(), StoreRepository)
+                                break
+                            default: 
+                                Logger.error("데이터를 삭제하는데 실패했습니다.", orderError.toString(), StoreRepository)
+                                break
+                        }
+                    }
+                })
+                
+                if(storeError instanceof PrismaClientKnownRequestError) {
+                    switch(storeError.code) {
+                        case "P2025":
+                            Logger.error("가게정보를 찾을 수 없어 주문내역 갱신을 실패했습니다.", storeError.toString(), StoreRepository)
+                            throw ERROR.NotFoundData
+                    }
+                }
+                Logger.error("가게 주문내역 갱신을 실패했습니다.", storeError.toString(), StoreRepository)
                 throw ERROR.ServerDatabaseError
             })
             return createdOrder

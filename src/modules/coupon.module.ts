@@ -6,11 +6,13 @@ import { PrismaService } from "src/services/prisma.service";
 import { RedisService } from "src/services/redis.service";
 import { AuthModule } from "./auth.module";
 import { JwtModule } from "./jwt.module";
+import { SSEModule } from "./sse.module";
 
 @Module({
     imports: [
         AuthModule,
-        JwtModule
+        JwtModule,
+        SSEModule,
     ],
     controllers: [CouponController],
     providers: [
