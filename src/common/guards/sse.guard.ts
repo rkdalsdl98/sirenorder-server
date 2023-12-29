@@ -43,9 +43,7 @@ export class SSEGuard implements CanActivate {
 
     private async _getPayload(token: string) :
     Promise<IPayload | FailedResponse> {
-        try {
-            let { payload } = await this.auth.verifyToken(token)
-            return payload
-        } catch(e) { return e }
+        let { payload } = await this.auth.verifyToken(token)
+        return payload
     }
 }

@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable, Logger } from "@nestjs/common";
+import { CanActivate, ExecutionContext, HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
 import { Request } from 'express';
 import { ERROR, FailedResponse } from "../type/response.type";
 import { AuthService } from "src/services/auth.service";
@@ -18,17 +18,24 @@ export class AuthGuard implements CanActivate {
             req.user = ERROR.UnAuthorized
             return true
         }
-        
-        const payload = await this._getPayload(token)
-        if("email" in payload) {
-            if(!payload.email || !/^[0-9a-zA-Z]+@[a-zA-Z]+.[a-zA-Z]{2,3}$/g.test(`${payload.email}`)) {
-                Logger.error(`[이메일 형식이 아님] 요청 아이피: ${reqAddress}`, AuthGuard.name)
-                req.user = ERROR.UnAuthorized
-                return true
+        try {
+            const payload = await this._getPayload(token)
+            if("email" in payload) {
+                if(!payload.email || !/^[0-9a-zA-Z]+@[a-zA-Z]+.[a-zA-Z]{2,3}$/g.test(`${payload.email}`)) {
+                    Logger.error(`[이메일 형식이 아님] 요청 아이피: ${reqAddress}`, AuthGuard.name)
+                    req.user = ERROR.UnAuthorized
+                    return true
+                }
+                req.user = payload
+            } else req.user = ERROR.UnAuthorized
+            return true
+        } catch(e) {
+            if(typeof e === typeof ERROR) {
+                const err: typeof ERROR = ({...e} satisfies typeof ERROR)
+                Logger.error(`[검증 할 수 없는 토큰] 요청 아이피: ${reqAddress}\n위조데이터 가능성 있음`, AuthGuard.name)
             }
-            req.user = payload
-        } else req.user = ERROR.UnAuthorized
-        return true
+            throw new HttpException(e, HttpStatus.FORBIDDEN)
+        }
     }
 
     private _extractTokenFromHeader(request: Request): string | null {
@@ -38,10 +45,8 @@ export class AuthGuard implements CanActivate {
     }
 
     private async _getPayload(token: string) :
-    Promise<IPayload | FailedResponse> {
-        try {
-            let { payload } = await this.auth.verifyToken(token)
-            return payload
-        } catch(e) { return e }
+    Promise<IPayload> {
+        let { payload } = await this.auth.verifyToken(token)
+        return payload
     }
 }
