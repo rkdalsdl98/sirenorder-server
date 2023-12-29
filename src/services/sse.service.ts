@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common";
 import { Observable, Subject, filter, map } from "rxjs";
-import { RedisService } from "./redis.service";
 import { GiftNotifySubject, Notifier, OrderNotifySubject, SSESubject, UserNotifySubject } from "src/common/type/sse.type";
 import { ERROR } from "src/common/type/response.type";
 
@@ -9,10 +8,6 @@ export class SSEService {
     private sub = new Subject<SSESubject>()
     private obs = this.sub.asObservable()
     private notifiers: Notifier[] = []
-
-    constructor(
-        private readonly redis: RedisService,
-    ){}
 
     listenSSE(
         listener_email: string,

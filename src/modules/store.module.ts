@@ -3,7 +3,6 @@ import { StoreController } from "../controllers/store.controller";
 import { MerchantRepository } from "../repositories/store/merchant.repository";
 import { StoreRepository } from "../repositories/store/store.repository";
 import { MerchantService } from "../services/merchant.service";
-import { PrismaService } from "../services/prisma.service";
 import { RedisService } from "../services/redis.service";
 import { StoreService } from "../services/store.service";
 import { ConfigService } from "@nestjs/config";
@@ -28,7 +27,6 @@ import { CouponModule } from "./coupon.module";
         StoreService,
         StoreRepository,
         RedisService,
-        PrismaService,
         ConfigService,
         MerchantRepository,
         MerchantService,

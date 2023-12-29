@@ -9,13 +9,9 @@ import { GiftInfo } from "src/common/type/gift.type";
 
 @Injectable()
 export class CouponRepository implements IRepository<CouponEntity, unknown> {
-    constructor(
-        private readonly prisma: PrismaService,
-    ){}
-    
     async deleteExpiredCoupon()
     : Promise<void> {
-        await this.prisma.coupon.deleteMany({
+        await PrismaService.prisma.coupon.deleteMany({
             where: {
                 AND: {
                     expirationperiod: {
@@ -32,12 +28,12 @@ export class CouponRepository implements IRepository<CouponEntity, unknown> {
     }
 
     async getMany(): Promise<CouponEntity[]> {
-        return (await this.prisma.coupon.findMany())
+        return (await PrismaService.prisma.coupon.findMany())
         .map(c => this.parsingEntity(c))
     }
 
     async getBy(code: string ): Promise<CouponEntity> {
-        return this.parsingEntity(await this.prisma.coupon.findUnique({
+        return this.parsingEntity(await PrismaService.prisma.coupon.findUnique({
             where: { code }
         })
         .catch(err => {
@@ -55,7 +51,7 @@ export class CouponRepository implements IRepository<CouponEntity, unknown> {
     async publishCoupon(args: {
         coupon: CouponEntity,
     }) : Promise<boolean> {
-        return !!(await this.prisma.coupon.create({
+        return !!(await PrismaService.prisma.coupon.create({
             data: {
                 code: args.coupon.code,
                 expirationperiod: args.coupon.expiration_period,
@@ -72,7 +68,7 @@ export class CouponRepository implements IRepository<CouponEntity, unknown> {
         current_user_email: string,
         coupon: SimpleCouponEntity,
     }) : Promise<boolean> {
-        return !!(await this.prisma.user.update({
+        return !!(await PrismaService.prisma.user.update({
             where: { email: args.current_user_email },
             data: {
                 coupons: {
@@ -90,7 +86,7 @@ export class CouponRepository implements IRepository<CouponEntity, unknown> {
         gift: GiftInfo,
         coupon: SimpleCouponEntity,
     }) : Promise<void> {
-        await this.prisma.user.update({
+        await PrismaService.prisma.user.update({
             where: { email: args.gift.to },
             data: {
                 gifts: {
@@ -125,7 +121,7 @@ export class CouponRepository implements IRepository<CouponEntity, unknown> {
         encryption_code: string,
         gift_uid: string,
     ) {
-        return await this.prisma.$transaction(async tx => {
+        return await PrismaService.prisma.$transaction(async tx => {
             const deleteCoupon = await tx.coupon
             .delete({ where: { code: encryption_code } })
             .catch(err => {
@@ -171,7 +167,7 @@ export class CouponRepository implements IRepository<CouponEntity, unknown> {
         encryption_code: string,
     )
     : Promise<CouponEntity> {
-        return await this.prisma.$transaction(async tx => {
+        return await PrismaService.prisma.$transaction(async tx => {
             const deleteCoupon = await tx.coupon
             .delete({ where: { code: encryption_code } })
             .catch(err => {

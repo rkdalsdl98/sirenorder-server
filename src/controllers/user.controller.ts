@@ -100,7 +100,8 @@ export class UserController {
     | typeof ERROR.UnAuthorized
     >> {
         try {
-            if("email" in data.payload) {
+            if("email" in data.payload 
+            && "authorized" in data.payload) {
                 let result : UserDto
                 if("token" in data.payload) result = await this.userService.checkRefresh(data.payload.email, data.payload.token)
                 else result = await this.userService.loginByEmail(data.payload.email)

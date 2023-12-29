@@ -9,17 +9,13 @@ import { BottleSize } from "src/common/type/menu.type";
 
 @Injectable()
 export class MenuRepository implements IRepository<MenuEntity, MenuDetailEntity> {
-    constructor(
-        private readonly prisma: PrismaService
-    ){}
-
-    /**
+     /**
      * 쿼리 실행 결과값을 순서대로 정렬되어 배열로 반환
      * @param querys
      * @returns [...query results]
      */
     async transaction(querys: []) {
-        return await this.prisma.$transaction(querys)
+        return await PrismaService.prisma.$transaction(querys)
         .catch(err => {
             Logger.error("트랙잭션중 오류가 발생했습니다.", err.toString(), MenuRepository)
             throw ERROR.ServerDatabaseError
@@ -29,7 +25,7 @@ export class MenuRepository implements IRepository<MenuEntity, MenuDetailEntity>
     async getBy(args: {
         id?: number
     }): Promise<MenuDetailEntity> {
-        return this.parsingMenuDetailEntity(await this.prisma.menudetail.findUnique({
+        return this.parsingMenuDetailEntity(await PrismaService.prisma.menudetail.findUnique({
             where: { id: args.id },
             include: { nutritions: true }
         }).catch(err => {
@@ -39,7 +35,7 @@ export class MenuRepository implements IRepository<MenuEntity, MenuDetailEntity>
     }
 
     async getMany(category?: Category): Promise<MenuEntity[]> {
-        return (await this.prisma.menu.findMany({
+        return (await PrismaService.prisma.menu.findMany({
             where: { category },
             include: { detail: { select: { id: true }} 
         }})
@@ -50,7 +46,7 @@ export class MenuRepository implements IRepository<MenuEntity, MenuDetailEntity>
     }
 
     async getManyDetail(): Promise<MenuDetailEntity[]> {
-        return (await this.prisma.menudetail.findMany({ include: { nutritions: true }})
+        return (await PrismaService.prisma.menudetail.findMany({ include: { nutritions: true }})
         .catch(err => {
             Logger.error("데이터를 불러오는데 실패했습니다.", err.toString(), MenuRepository)
             throw ERROR.ServerDatabaseError

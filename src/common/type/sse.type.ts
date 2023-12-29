@@ -3,6 +3,7 @@ import { GiftEntity } from "src/repositories/user/gift.entity"
 import { tags } from "typia"
 import { OrderState } from "./order.type"
 
+export interface NotifySubject {}
 export type NotifyType =
 | "update-notify"
 | "event-notify"
@@ -10,23 +11,22 @@ export type NotifyType =
 | "gift-notify"
 | "order-notify"
 | "user-notify"
-export type ServerNotifySubject = {
+export interface ServerNotifySubject extends NotifySubject {
     readonly message: string
     readonly title: string
 }
-export type OrderNotifySubject = {
+export interface OrderNotifySubject extends NotifySubject {
     readonly receiver_email: string & tags.Format<"email">
     readonly order_state: OrderState
 }
-export type GiftNotifySubject = {
+export interface GiftNotifySubject extends NotifySubject {
     readonly gift: GiftEntity
 }
-export type UserNotifySubject = {
+export interface UserNotifySubject extends NotifySubject {
     readonly receiver_email: string & tags.Format<"email">
     readonly message: string
     readonly title: string
 }
-export type NotifySubject = ServerNotifySubject | OrderNotifySubject | GiftNotifySubject
 export type SSESubject = {
     readonly notify_type: NotifyType
     readonly subject: NotifySubject 

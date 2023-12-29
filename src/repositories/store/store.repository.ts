@@ -4,19 +4,15 @@ import { PrismaService } from "../../services/prisma.service";
 import { LatLng, StoreEntity } from "./store.entity";
 import { ERROR } from "../../common/type/response.type";
 import { StoreDetailEntity, WeeklyHours } from "./storedetail.entity";
-import { DeliveryInfo, OrderEntity } from "../user/order.entity";
+import { OrderEntity } from "../user/order.entity";
 import { MenuInfo } from "src/common/type/order.type";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { OrderHistory } from "../user/user.entity";
 
 @Injectable()
 export class StoreRepository implements IRepository<StoreEntity, StoreDetailEntity>  {
-    constructor(
-        private readonly prisma: PrismaService,
-    ){}
-
     async getBy(id: number): Promise<StoreDetailEntity> {
-        return this.parsingDetailEntity(await this.prisma.storedetail.findUnique({ 
+        return this.parsingDetailEntity(await PrismaService.prisma.storedetail.findUnique({ 
             where: { id }
         }).catch(err => {
             Logger.error("데이터를 불러오는데 실패했습니다.", err.toString(), StoreRepository)
@@ -25,7 +21,7 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
     }
 
     async getOrders(storeId: string): Promise<OrderEntity[]> {
-        return (await this.prisma.order.findMany({
+        return (await PrismaService.prisma.order.findMany({
             where: { store_uid: storeId }
         }).catch(err => {
             Logger.error("데이터를 불러오는데 실패했습니다.", err.toString(), StoreRepository)
@@ -35,7 +31,7 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
 
     async addOrderHistory(buyer_email: string, history: OrderHistory)
     : Promise<boolean> {
-        return !!(await this.prisma.user.update({
+        return !!(await PrismaService.prisma.user.update({
             where: { email: buyer_email },
             data: {
                 orderhistory: {
@@ -49,7 +45,7 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
     }
 
     async getMany(): Promise<StoreEntity[]> {
-        return (await this.prisma.store.findMany({ 
+        return (await PrismaService.prisma.store.findMany({ 
             include: { detail: { select: { id: true }} }
         }).catch(err => {
             Logger.error("데이터를 불러오는데 실패했습니다.", err.toString(), StoreRepository)
@@ -59,7 +55,7 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
 
     async createOrder(order: OrderEntity)
     : Promise<OrderEntity> {
-        return await this.prisma.$transaction<OrderEntity>(async tx => {
+        return await PrismaService.prisma.$transaction<OrderEntity>(async tx => {
             const createdOrder = this.parsingOrderEntity(await tx.order.create({
                 data: {
                     store_uid: order.store_uid,
@@ -120,7 +116,7 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
     }
 
     async deleteOrder(orderId: string): Promise<OrderEntity> {
-        return this.parsingOrderEntity(await this.prisma.order.delete({
+        return this.parsingOrderEntity(await PrismaService.prisma.order.delete({
             where: { uuid: orderId }
         }).catch(err => {
             if(err instanceof PrismaClientKnownRequestError) {
@@ -135,7 +131,7 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
     }
 
     async deleteOrders() : Promise<void> {
-        await this.prisma.order.deleteMany()
+        await PrismaService.prisma.order.deleteMany()
     }
 
     parsingEntity(e) : StoreEntity {

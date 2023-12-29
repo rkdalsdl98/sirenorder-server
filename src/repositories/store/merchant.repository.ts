@@ -11,12 +11,8 @@ import { MerchantDto } from "src/dto/merchant.dto";
 
 @Injectable()
 export class MerchantRepository implements IRepository<MerchantEntity, undefined> {
-    constructor(
-        private readonly prisma: PrismaService,
-    ){}
-
     async getMany(): Promise<MerchantEntity[]> {
-        return (await this.prisma.merchant.findMany({
+        return (await PrismaService.prisma.merchant.findMany({
             include: { 
                 store: {
                     include: { 
@@ -34,7 +30,7 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
     async getBy(args: {
         uuid: string
     }): Promise<MerchantEntity> {
-        return this.parsingEntity(await this.prisma.merchant.findUnique({ 
+        return this.parsingEntity(await PrismaService.prisma.merchant.findUnique({ 
             where: { uuid: args.uuid },
             include: {
                 store: {
@@ -62,7 +58,7 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
         pass: string,
         salt: string,
     }): Promise<MerchantEntity> {
-        return this.parsingEntity(await this.prisma.merchant.create({
+        return this.parsingEntity(await PrismaService.prisma.merchant.create({
             data: {
                 uuid: args.uuids.merchant,
                 pass: args.pass,
@@ -138,7 +134,7 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
         args: {
         uuid: string 
     }): Promise<MerchantEntity> {
-        return this.parsingEntity(await this.prisma.merchant.update({
+        return this.parsingEntity(await PrismaService.prisma.merchant.update({
             where: { uuid: args.uuid},
             data: {
                 store: {
@@ -173,7 +169,7 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
         walletUUID: string,
     }) :
     Promise<SalesEntity> {
-        return this.parsingSalesEntity(await this.prisma.sales.upsert({
+        return this.parsingSalesEntity(await PrismaService.prisma.sales.upsert({
             where: { uuid: args.salesId },
             update: {
                 amounts: updateDate.amounts,
@@ -206,7 +202,7 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
         detailId: number
     }) :
     Promise<StoreDetailEntity> {
-        return this.parsingDetailEntity(await this.prisma.storedetail.update({
+        return this.parsingDetailEntity(await PrismaService.prisma.storedetail.update({
             where: { id: args.detailId },
             data: {
                 description: updateDate.description,
@@ -232,7 +228,7 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
     async deleteBy(args: {
         uuid: string
     }): Promise<boolean> {
-        return !!(await this.prisma.merchant.delete({
+        return !!(await PrismaService.prisma.merchant.delete({
             where: { uuid: args.uuid }
         }))
     }

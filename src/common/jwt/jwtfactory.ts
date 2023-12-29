@@ -50,7 +50,7 @@ export class JwtFactory {
             }
             payload.authorized = false
         }
-        
+
         if("email" in payload) {
             return { payload: payload as IPayload.IPayloadUser }
         }

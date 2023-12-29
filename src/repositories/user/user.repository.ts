@@ -11,26 +11,9 @@ import { Prisma } from "@prisma/client";
 
 @Injectable()
 export class UserRepository implements IRepository<UserEntity, undefined> {
-    constructor(
-        private readonly prisma: PrismaService
-    ){}
-
-    // async test() {
-    //     const primary: Prisma.DMMF.Field | undefined =
-    //     Prisma.dmmf.datamodel.models
-    //       .find((model) => model.name === "user")
-    //       ?.fields.find((field) => field.isId === true)
-    //     console.log(primary)
-    //     if(primary) {
-    //         const res = 
-    //         await (new PrismaClient()["user"] as any).findMany();
-    //         console.log(res)
-    //     }
-    // }
-
     async loadUsers()
     : Promise<UserEntity[]> {
-        return await this.prisma.$transaction<UserEntity[]>(async tx => {
+        return await PrismaService.prisma.$transaction<UserEntity[]>(async tx => {
             const users = (await tx.user.findMany({
                 include: {
                     wallet: {
@@ -106,7 +89,7 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
     async getBy(args: {
         email?: string,
     }): Promise<UserEntity> {
-        return this.parsingEntity(await this.prisma.user.findUnique({ 
+        return this.parsingEntity(await PrismaService.prisma.user.findUnique({ 
             where: { 
                 email: args.email,
             },
@@ -135,7 +118,7 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
 
     async getOrderHistory(email: string)
     : Promise<OrderHistory[]> {
-        const result = await this.prisma.user.findFirst({
+        const result = await PrismaService.prisma.user.findFirst({
             where: { email },
             select: {
                 orderhistory: true,
@@ -158,7 +141,7 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
         uuid: string,
         wallet_uid: string,
      }): Promise<UserEntity> {
-        return this.parsingEntity(await this.prisma.user.create({
+        return this.parsingEntity(await PrismaService.prisma.user.create({
             data: {
                 uuid: args.uuid,
                 email: args.email,
@@ -190,7 +173,7 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
         updateData: Partial<UserEntity>, 
         email: string
     ): Promise<UserEntity> {
-        return this.parsingEntity(await this.prisma.user.update({
+        return this.parsingEntity(await PrismaService.prisma.user.update({
             where: { email },
             data: {
                 nickname: updateData.nickname,
@@ -221,7 +204,7 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
     }
 
     async deleteBy(email: string): Promise<boolean> {
-        return !!(await this.prisma.user.delete({ where: { email } })
+        return !!(await PrismaService.prisma.user.delete({ where: { email } })
         .catch(err => {
             if(err instanceof PrismaClientKnownRequestError) {
                 switch(err.code) {
