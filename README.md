@@ -42,5 +42,5 @@
 
 
 ### 클라이언트 레포지토리 이동하기  
-(https://github.com/rkdalsdl98/sirenorder-app)[모바일 앱]  
-(https://github.com/rkdalsdl98/sirenorder-desktop)[데스크톱 앱]
+[https://github.com/rkdalsdl98/sirenorder-app](모바일 앱)  
+[https://github.com/rkdalsdl98/sirenorder-desktop](데스크톱 앱)
