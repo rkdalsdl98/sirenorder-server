@@ -175,7 +175,7 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
 
             const loginResult = 
             SocketEventHandler
-            .MessageHandler
+            .Merchant
             .login(merchant, data.pass, this.auth)
 
             await SocketEventHandler

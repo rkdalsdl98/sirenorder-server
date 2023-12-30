@@ -1,5 +1,5 @@
 import { Socket } from "socket.io";
-import { RoomJoinOptions, SocketResponseBody } from "../type/socket.type";
+import { StoreCache, SocketResponseBody } from "../type/socket.type";
 import { RedisService } from "src/services/redis.service";
 import { AuthService } from "src/services/auth.service";
 import { MerchantEntity } from "src/repositories/store/merchant.entity";
@@ -15,7 +15,7 @@ export namespace SocketEventHandler {
             socketId: string, 
             redis: RedisService
         ) => {
-            const caches = await redis.get<RoomJoinOptions[]>("stores", logPath)
+            const caches = await redis.get<StoreCache[]>("stores", logPath)
             const store = caches!.find(s => s.storeId === storeId)
             
             if(!store) {
@@ -41,7 +41,7 @@ export namespace SocketEventHandler {
             redis?: RedisService,
         }) => {
             if(options.redis) {
-                const caches = (await options.redis.get<RoomJoinOptions[]>("stores", logPath))
+                const caches = (await options.redis.get<StoreCache[]>("stores", logPath))
                 ?.map(c => {
                     if(c.socketId === options.client.id) {
                         return {
@@ -67,28 +67,9 @@ export namespace SocketEventHandler {
             }
             options.client.disconnect()
         }
-        // export const leaveroom = async (
-        //     client: Socket, 
-        //     options: RoomleaveOptions,
-        //     redis: RedisService,
-        // ) => {
-        //     if(!client.rooms.has(options.gu)) return
-        //     const caches = await redis.get<{ storename: string }[]>(options.gu, logPath)
-        //     let after : { storename: string }[] = []
-
-        //     if(caches) caches.forEach(c => {
-        //         if(c.storename !== options.storename) after.push(c)
-        //     })
-            
-        //     await redis.set(options.gu,
-        //         after,
-        //         logPath
-        //     )
-        //     client.leave(options.gu)
-        // }
     }
 
-    export namespace MessageHandler {
+    export namespace Merchant {
         export const login = (
             findMerchant: MerchantEntity,
             pass: string, 

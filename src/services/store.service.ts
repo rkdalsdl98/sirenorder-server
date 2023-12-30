@@ -3,7 +3,7 @@ import { StoreDetailDto, StoreDto } from "../dto/store.dto";
 import { StoreRepository } from "../repositories/store/store.repository";
 import { RedisService } from "./redis.service";
 import { StoreEntity } from "src/repositories/store/store.entity";
-import { RoomJoinOptions } from "src/common/type/socket.type";
+import { StoreCache } from "src/common/type/socket.type";
 import { SocketGateWay } from "src/common/socket/socket.gateway";
 import { DeliveryInfo, OrderEntity } from "src/repositories/user/order.entity";
 import { ERROR } from "src/common/type/response.type";
@@ -28,7 +28,7 @@ export class StoreService {
     Promise<void> {
         await this.storeRepository.deleteOrders()
         const stores = (await this.storeRepository.getMany())
-        .map(s => ({ ...s, storeId: s.uuid, isOpen: false } as RoomJoinOptions))
+        .map(s => ({ ...s, storeId: s.uuid, isOpen: false } as StoreCache))
         await this.redis.set("stores", stores, StoreService.name)
         .then(_=> Logger.log("상점정보 인 메모리 캐싱"))
         .catch(err => {
@@ -183,7 +183,7 @@ export class StoreService {
 
         let { data } = JSON.parse(order.custom_data)
         let { storeId, orderInfo } : { storeId: string, orderInfo: OrderInfo } = JSON.parse(data)
-        const store = (await this.redis.get<RoomJoinOptions[]>("stores", StoreService.name))
+        const store = (await this.redis.get<StoreCache[]>("stores", StoreService.name))
         ?.find(s => s.storeId === storeId)
 
         if(store && store.isOpen && store.socketId) {
@@ -250,7 +250,7 @@ export class StoreService {
 
     private async _isOpenStore(storeId: string)
     : Promise<string | undefined | null> {
-        return (await this.redis.get<RoomJoinOptions[]>("stores", CouponService.name))
+        return (await this.redis.get<StoreCache[]>("stores", CouponService.name))
         ?.find(store => store.storeId === storeId)?.socketId
     }
 

@@ -5,7 +5,7 @@ import { ERROR } from "../type/response.type"
 import * as dotenv from "dotenv"
 import { StoreRepository } from "src/repositories/store/store.repository"
 import { RegisteredOrder } from "../type/order.type"
-import { RoomJoinOptions } from "../type/socket.type"
+import { StoreCache } from "../type/socket.type"
 import { UserEntity } from "src/repositories/user/user.entity"
 
 dotenv.config()
@@ -65,7 +65,7 @@ export namespace PortOneMethod {
             return res
         }) 
 
-        const store : RoomJoinOptions | null | undefined = await redis.get<RoomJoinOptions[]>(
+        const store : StoreCache | null | undefined = await redis.get<StoreCache[]>(
             "stores",
             logPath,
         ).then(res => {

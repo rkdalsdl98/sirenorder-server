@@ -118,12 +118,14 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
 
     async getOrderHistory(email: string)
     : Promise<OrderHistory[]> {
-        const result = await PrismaService.prisma.user.findFirst({
+        const result = 
+        await PrismaService.prisma.user.findFirst({
             where: { email },
             select: {
-                orderhistory: true,
+                orderhistory: true
             }
         })
+        
         if(!result) {
             throw ERROR.NotFoundData
         }

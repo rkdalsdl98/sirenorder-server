@@ -7,14 +7,12 @@ import { UserService } from "../services/user.service";
 import { AuthGuard } from "src/common/guards/auth.guard";
 import { AuthDecorator } from "src/common/decorators/auth.decorator";
 import { UserDto } from "src/dto/user.dto";
-import { CouponService } from "src/services/coupon.service";
 
 @Controller('user')
 @ApiTags("유저")
 export class UserController {
     constructor(
         private readonly userService: UserService,
-        private readonly couponService: CouponService,
     ){}
     
     @TypedRoute.Post("regist/publish")
@@ -129,16 +127,4 @@ export class UserController {
             }
         } catch(e) { return e }
     }
-
-    // @TypedRoute.Delete()
-    // async deleteUser(
-    //     @TypedQuery() query: { email: string },
-    // ) {
-    //     try {
-    //         return await this.userService.deleteUser(query.email)
-    //     } catch(e) {
-    //         console.log(e)
-    //         return e
-    //     }
-    // }
 }

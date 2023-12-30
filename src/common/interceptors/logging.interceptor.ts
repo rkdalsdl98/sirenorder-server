@@ -26,7 +26,7 @@ export class LoggingInterceptor implements NestInterceptor {
         .pipe(
             tap(_=> console.log(`[요청 처리 성공] ${ Date.now() - before}/ms`)),
             catchError((err, _) => {
-                this.handleException(
+                this.loggingException(
                     `[요청 처리 실패] ${ Date.now() - before}/ms`, 
                     err,
                 )
@@ -37,7 +37,7 @@ export class LoggingInterceptor implements NestInterceptor {
         )
     }
 
-    handleException(logmessage: string, err: any) {
+    loggingException(logmessage: string, err: any) {
         if(err instanceof InternalServerErrorException) {
             const res = err.getResponse()
             if(typeof res === 'string') {

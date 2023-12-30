@@ -187,19 +187,7 @@ export class UserService {
 
                 await this._upsertCache(user)
                 return { ...user } as UserDto
-            }
-
-            // 저장되어 있는 토큰 폐기
-            const user = await this.userRepository.updateBy({
-                accesstoken: null,
-                refreshtoken: null,
-            }, findUser.email)
-            await this._upsertCache(user)
-            // 디비에 저장되어 있는 RefreshToken이 오염될 경우에만
-            // 에러를 스로잉 함
-            var error = ERROR.UnAuthorized
-            error.substatus = "ForgeryData"
-            throw error
+            } else throw (await this._disposeToken(findUser))
         }
     }
 
@@ -258,6 +246,26 @@ export class UserService {
             if(!found) caches.push(cache)
             await this.redis.set("users", caches, UserService.name)
         }
+    }
+
+    /**
+     * RefreshToken의 기한이 만료되었거나 오염되었다고 판단 될 경우
+     * 
+     * 모든 토큰을 폐기하고 쓰로잉 할 오류를 리턴
+     * @param findUser 
+     */
+    private async _disposeToken(findUser: UserEntity) {
+        // 저장되어 있는 토큰 폐기
+        const user = await this.userRepository.updateBy({
+            accesstoken: null,
+            refreshtoken: null,
+        }, findUser.email)
+        await this._upsertCache(user)
+        // 디비에 저장되어 있는 RefreshToken이 오염될 경우에만
+        // 에러를 리턴
+        var error = ERROR.UnAuthorized
+        error.substatus = "ForgeryData"
+        return error
     }
 
     /**

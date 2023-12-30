@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { MerchantRepository } from "../repositories/store/merchant.repository";
 import { AuthService } from "./auth.service";
 import { MerchantDto } from "src/dto/merchant.dto";
-import { RoomJoinOptions } from "src/common/type/socket.type";
+import { StoreCache } from "src/common/type/socket.type";
 import { RedisService } from "./redis.service";
 
 @Injectable()
@@ -36,10 +36,10 @@ export class MerchantService {
             salt,
         }).then(async merchant => {
             const store = merchant.store
-            const caches = await this.redis.get<RoomJoinOptions[]>("stores", MerchantService.name) ?? []
+            const caches = await this.redis.get<StoreCache[]>("stores", MerchantService.name) ?? []
             await this.redis.set(
                 "stores", [...caches, 
-                {...store, storeId: store.uuid, isOpen: false} as RoomJoinOptions], 
+                {...store, storeId: store.uuid, isOpen: false} as StoreCache], 
                 MerchantService.name
             )
         })
