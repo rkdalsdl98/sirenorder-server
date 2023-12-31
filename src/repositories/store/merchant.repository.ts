@@ -181,6 +181,7 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
                 salesdate: updateDate.salesdate,
             },
             create: {
+                uuid: args.salesId,
                 amounts: updateDate.amounts,
                 menus: updateDate.menus,
                 salesdate: updateDate.salesdate!,

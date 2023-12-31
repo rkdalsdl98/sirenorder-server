@@ -112,7 +112,7 @@ model storewallet {
 }
 
 model sales {
-  uuid String @id @default(cuid())
+  uuid String @id
   amounts Int @default(0)
   menus Json[]
   salesdate DateTime @default(now())

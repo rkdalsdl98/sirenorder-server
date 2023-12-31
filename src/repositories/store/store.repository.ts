@@ -67,7 +67,7 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                 where: { uuid: order.store_uid },
                 data: {
                     wallet: {
-                        update: ({
+                        update: {
                             data: {
                                 sales: {
                                     create: {
@@ -76,9 +76,9 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                                         menus: order.menus,
                                     }
                                 },
-                                point: { increment: 0 }
+                                point: { increment: createdOrder.totalprice }
                             }
-                        } satisfies Prisma.storewalletUpdateToOneWithWhereWithoutStoreInput)
+                        }
                     }
                 }
             }).catch(async storeError => {
