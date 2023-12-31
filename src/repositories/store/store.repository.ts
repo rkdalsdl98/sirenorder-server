@@ -69,6 +69,7 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                     wallet: {
                         update: {
                             data: {
+                                point: createdOrder.totalprice,
                                 sales: {
                                     create: {
                                         uuid: sales_uid,
@@ -131,6 +132,7 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                     wallet: {
                         update: ({
                             data: {
+                                point: deletedOrder.totalprice,
                                 sales: {
                                     delete: {
                                         uuid: sales_uid
