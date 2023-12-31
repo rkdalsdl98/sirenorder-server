@@ -8,7 +8,6 @@ import { OrderEntity } from "../user/order.entity";
 import { MenuInfo } from "src/common/type/order.type";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { OrderHistory } from "../user/user.entity";
-import { Prisma } from "@prisma/client";
 
 @Injectable()
 export class StoreRepository implements IRepository<StoreEntity, StoreDetailEntity>  {
@@ -63,25 +62,33 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                 Logger.error("데이터를 갱신하는데 실패했습니다.", err.toString(), StoreRepository)
                 throw ERROR.ServerDatabaseError
             }))
-            await tx.store.update({
+            const store = await tx.store.findUnique({ 
                 where: { uuid: order.store_uid },
-                data: {
-                    wallet: {
-                        update: {
-                            data: {
-                                point: {
-                                    increment: 0
-                                },
-                                sales: {
-                                    create: {
-                                        uuid: sales_uid,
-                                        amounts: order.totalprice,
-                                        menus: order.menus,
-                                    }
-                                },
-                            }
-                        }
+                include: { wallet: { select: { uuid: true } } } 
+            })
+            .catch(err => {
+                if(err instanceof PrismaClientKnownRequestError) {
+                    switch(err.code) {
+                        case "P2025":
+                            Logger.error("주문정보를 찾을 수 없어 삭제에 실패했습니다.", err.toString(), StoreRepository)
+                            throw ERROR.NotFoundData
                     }
+                }
+                Logger.error("데이터를 삭제하는데 실패했습니다.", err.toString(), StoreRepository)
+                throw ERROR.ServerDatabaseError
+            })
+            await tx.storewallet.update({
+                where: { uuid: store?.wallet?.uuid },
+                include: { sales: true },
+                data: {
+                    sales: {
+                        create: {
+                            uuid: sales_uid,
+                            amounts: order.totalprice,
+                            menus: order.menus,
+                        }
+                    },
+                    point: { increment: createdOrder.totalprice }
                 }
             }).catch(async storeError => {
                 await tx.order.delete({
@@ -95,6 +102,28 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                                 break
                             default: 
                                 Logger.error("데이터를 삭제하는데 실패했습니다.", orderError.toString(), StoreRepository)
+                                break
+                        }
+                    }
+                })
+
+                await tx.storewallet.update({ 
+                    where: { uuid: store?.wallet?.uuid },
+                    data: {
+                        point: { decrement: createdOrder.totalprice },
+                        sales: {
+                            delete: { uuid: sales_uid }
+                        }
+                    } 
+                })
+                .catch(salesError => {
+                    if(salesError instanceof PrismaClientKnownRequestError) {
+                        switch(salesError.code) {
+                            case "P2025":
+                                Logger.error("판매내역를 찾을 수 없어 삭제에 실패했습니다.", salesError.toString(), StoreRepository)
+                                break
+                            default: 
+                                Logger.error("판매내역를 삭제하는데 실패했습니다.", salesError.toString(), StoreRepository)
                                 break
                         }
                     }
@@ -132,18 +161,16 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                 where: { uuid: deletedOrder.store_uid },
                 data: {
                     wallet: {
-                        update: ({
+                        update: {
                             data: {
                                 point: {
                                     decrement: 0
                                 },
                                 sales: {
-                                    delete: {
-                                        uuid: sales_uid
-                                    }
+                                    delete: { uuid: sales_uid }
                                 },
                             },
-                        } satisfies Prisma.storewalletUpdateToOneWithWhereWithoutStoreInput)
+                        }
                     }
                 },
             }).catch(err => {
