@@ -76,7 +76,7 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                                         menus: order.menus,
                                     }
                                 },
-                                point: { increment: createdOrder.totalprice }
+                                point: { increment: 0 }
                             }
                         } satisfies Prisma.storewalletUpdateToOneWithWhereWithoutStoreInput)
                     }
