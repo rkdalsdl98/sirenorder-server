@@ -76,7 +76,6 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                                         menus: order.menus,
                                     }
                                 },
-                                point: { increment: createdOrder.totalprice }
                             }
                         }
                     }
@@ -137,7 +136,6 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                                         uuid: sales_uid
                                     }
                                 },
-                                point: { decrement: deletedOrder.totalprice }
                             },
                         } satisfies Prisma.storewalletUpdateToOneWithWhereWithoutStoreInput)
                     }
