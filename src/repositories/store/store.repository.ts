@@ -8,6 +8,7 @@ import { OrderEntity } from "../user/order.entity";
 import { MenuInfo } from "src/common/type/order.type";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { OrderHistory } from "../user/user.entity";
+import { Prisma } from "@prisma/client";
 
 @Injectable()
 export class StoreRepository implements IRepository<StoreEntity, StoreDetailEntity>  {
@@ -88,7 +89,9 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                             menus: order.menus,
                         }
                     },
-                    point: { increment: createdOrder.totalprice }
+                    point: ({ 
+                        increment: 10
+                    } satisfies Prisma.IntFieldUpdateOperationsInput)
                 }
             }).catch(async storeError => {
                 await tx.order.delete({
