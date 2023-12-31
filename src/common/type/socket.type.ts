@@ -21,7 +21,7 @@ SocketResponseBody<T> | SocketResponseBody<E> | any
 export type RoomleaveOptions = {
     readonly storeId: string
 }
-export type RoomJoinOptions = {
+export type StoreCache = {
     socketId?: string
     readonly storeId: string
     readonly imp_uid: string

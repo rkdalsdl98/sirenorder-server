@@ -105,6 +105,7 @@ model storedetail {
 
 model storewallet {
   uuid String @id
+  point Int @default(0)
   store store @relation("StoreWallet", fields: [store_uid], references: [uuid], onDelete: Cascade)
   store_uid String @unique
   sales sales[] @relation("Sales")

@@ -32,6 +32,7 @@ NestedType<OrderEntity
 & { 
     readonly state: OrderState
     readonly buyer_email: string
+    readonly sales_uid: string
 }>
 
 export type OrderInfo = {

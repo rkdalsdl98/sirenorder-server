@@ -53,19 +53,11 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
         })).map(e => this.parsingEntity(e))
     }
 
-    async createOrder(order: OrderEntity)
+    async createOrder(order: OrderEntity, sales_uid: string)
     : Promise<OrderEntity> {
         return await PrismaService.prisma.$transaction<OrderEntity>(async tx => {
             const createdOrder = this.parsingOrderEntity(await tx.order.create({
-                data: {
-                    store_uid: order.store_uid,
-                    imp_uid: order.imp_uid,
-                    uuid: order.uuid,
-                    deliveryinfo: order.deliveryinfo,
-                    menus: order.menus,
-                    saleprice: order.saleprice,
-                    totalprice: order.totalprice,
-                }
+                data: { ...order }
             }).catch(err => {
                 Logger.error("데이터를 갱신하는데 실패했습니다.", err.toString(), StoreRepository)
                 throw ERROR.ServerDatabaseError
@@ -75,12 +67,16 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                 data: {
                     wallet: {
                         update: {
-                            sales: {
-                                create: {
-                                    amounts: order.totalprice,
-                                    menus: order.menus,
-                                }
-                            }
+                            data: {
+                                sales: {
+                                    create: {
+                                        uuid: sales_uid,
+                                        amounts: order.totalprice,
+                                        menus: order.menus,
+                                    }
+                                },
+                                point: { increment: createdOrder.totalprice }
+                            },
                         }
                     }
                 }
@@ -115,19 +111,48 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
         })
     }
 
-    async deleteOrder(orderId: string): Promise<OrderEntity> {
-        return this.parsingOrderEntity(await PrismaService.prisma.order.delete({
-            where: { uuid: orderId }
-        }).catch(err => {
-            if(err instanceof PrismaClientKnownRequestError) {
-                switch(err.code) {
-                    case "P2025":
-                        throw ERROR.NotFoundData
+    async deleteOrder(orderId: string, sales_uid: string): Promise<OrderEntity> {
+        return await PrismaService.prisma.$transaction<OrderEntity>(async tx => {
+            const deletedOrder = this.parsingOrderEntity(await tx.order.delete({
+                where: { uuid: orderId }
+            }).catch(err => {
+                if(err instanceof PrismaClientKnownRequestError) {
+                    switch(err.code) {
+                        case "P2025":
+                            throw ERROR.NotFoundData
+                    }
                 }
-            }
-            Logger.error("데이터를 삭제하는데 실패했습니다.", err.toString(), StoreRepository)
-            throw ERROR.ServerDatabaseError
-        }))
+                Logger.error("데이터를 삭제하는데 실패했습니다.", err.toString(), StoreRepository)
+                throw ERROR.ServerDatabaseError
+            }))
+            await tx.store.update({
+                where: { uuid: deletedOrder.store_uid },
+                data: {
+                    wallet: {
+                        update: {
+                            data: {
+                                sales: {
+                                    delete: {
+                                        uuid: sales_uid
+                                    }
+                                },
+                                point: { decrement: deletedOrder.totalprice }
+                            }
+                        }
+                    }
+                },
+            }).catch(err => {
+                if(err instanceof PrismaClientKnownRequestError) {
+                    switch(err.code) {
+                        case "P2025":
+                            throw ERROR.NotFoundData
+                    }
+                }
+                Logger.error("상점 정보를 갱신하는데 실패했습니다.", err.toString(), StoreRepository)
+                throw ERROR.ServerDatabaseError
+            })
+            return deletedOrder
+        })
     }
 
     async deleteOrders() : Promise<void> {

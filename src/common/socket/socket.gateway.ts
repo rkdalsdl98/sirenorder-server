@@ -72,11 +72,11 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
                 message:"finish",
             }
         } catch(e) {
-            await PortOneMethod.removeOrderById({
+            const removeOrder = await PortOneMethod.removeOrderById({
                 redis: this.redis,
                 order_uid: data,
             })
-            await this.storeRepository.deleteOrder(data)
+            await this.storeRepository.deleteOrder(data, removeOrder.sales_uid)
             return {
                 result: false,
                 message: "fail",
@@ -133,11 +133,11 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
             //     imp_uid: data.imp_uid,
             //     redis: this.redis
             // })
-            const buyer_email = await PortOneMethod.removeOrderById({
+            const refuseOrder = await PortOneMethod.removeOrderById({
                 redis: this.redis,
                 order_uid: data.uuid,
             })
-            this.pushStateMessage(buyer_email, "refuse")
+            this.pushStateMessage(refuseOrder.buyer_email, "refuse")
             return {
                 result: true,
                 message: "refuse",

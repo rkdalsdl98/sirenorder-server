@@ -52,6 +52,10 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
         }))
     }
 
+    async clearSales() {
+        return await PrismaService.prisma.sales.deleteMany()
+    }
+
     async create(args: {
         createData: Omit<MerchantDto, "pass">,
         uuids: { merchant: string, store: string, wallet: string },
