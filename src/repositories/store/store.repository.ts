@@ -8,7 +8,6 @@ import { OrderEntity } from "../user/order.entity";
 import { MenuInfo } from "src/common/type/order.type";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { OrderHistory } from "../user/user.entity";
-import { Prisma } from "@prisma/client";
 
 @Injectable()
 export class StoreRepository implements IRepository<StoreEntity, StoreDetailEntity>  {
@@ -79,7 +78,7 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                 throw ERROR.ServerDatabaseError
             })
             await tx.storewallet.update({
-                where: { uuid: store?.wallet?.uuid },
+                where: { uuid: store!.wallet!.uuid },
                 include: { sales: true },
                 data: {
                     sales: {
@@ -89,9 +88,7 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                             menus: order.menus,
                         }
                     },
-                    point: ({ 
-                        increment: 10
-                    } satisfies Prisma.IntFieldUpdateOperationsInput)
+                    point: { increment: createdOrder.totalprice }
                 }
             }).catch(async storeError => {
                 await tx.order.delete({
@@ -111,7 +108,7 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                 })
 
                 await tx.storewallet.update({ 
-                    where: { uuid: store?.wallet?.uuid },
+                    where: { uuid: store!.wallet!.uuid },
                     data: {
                         point: { decrement: createdOrder.totalprice },
                         sales: {
