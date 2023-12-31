@@ -14,7 +14,7 @@ export class MerchantService {
     ){}
 
     async getTest() {
-        return this.merchantRepository.getMany()
+        return await this.merchantRepository.getMany()
     }
 
     async deleteMerchant(uuid: string) {
