@@ -68,9 +68,7 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                     wallet: {
                         update: {
                             data: {
-                                point: {
-                                    increment: createdOrder.totalprice
-                                },
+                                point: { increment: createdOrder.totalprice },
                                 sales: {
                                     create: {
                                         uuid: sales_uid,
@@ -133,9 +131,7 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                     wallet: {
                         update: {
                             data: {
-                                point: {
-                                    decrement: deletedOrder.totalprice
-                                },
+                                point: { decrement: deletedOrder.totalprice },
                                 sales: {
                                     delete: { uuid: sales_uid }
                                 },
