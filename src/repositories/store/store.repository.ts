@@ -8,6 +8,7 @@ import { OrderEntity } from "../user/order.entity";
 import { MenuInfo } from "src/common/type/order.type";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { OrderHistory } from "../user/user.entity";
+import { Prisma } from "@prisma/client";
 
 @Injectable()
 export class StoreRepository implements IRepository<StoreEntity, StoreDetailEntity>  {
@@ -66,16 +67,18 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                 where: { uuid: order.store_uid },
                 data: {
                     wallet: {
-                        update: {
-                            sales: {
-                                create: {
-                                    uuid: sales_uid,
-                                    amounts: order.totalprice,
-                                    menus: order.menus,
-                                }
-                            },
-                            point: { increment: createdOrder.totalprice }
-                        }
+                        update: ({
+                            data: {
+                                sales: {
+                                    create: {
+                                        uuid: sales_uid,
+                                        amounts: order.totalprice,
+                                        menus: order.menus,
+                                    }
+                                },
+                                point: { increment: createdOrder.totalprice }
+                            }
+                        } satisfies Prisma.storewalletUpdateToOneWithWhereWithoutStoreInput)
                     }
                 }
             }).catch(async storeError => {
@@ -127,14 +130,16 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                 where: { uuid: deletedOrder.store_uid },
                 data: {
                     wallet: {
-                        update: {
-                            sales: {
-                                delete: {
-                                    uuid: sales_uid
-                                }
+                        update: ({
+                            data: {
+                                sales: {
+                                    delete: {
+                                        uuid: sales_uid
+                                    }
+                                },
+                                point: { decrement: deletedOrder.totalprice }
                             },
-                            point: { decrement: deletedOrder.totalprice }
-                        }
+                        } satisfies Prisma.storewalletUpdateToOneWithWhereWithoutStoreInput)
                     }
                 },
             }).catch(err => {
