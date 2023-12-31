@@ -57,7 +57,7 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
     : Promise<OrderEntity> {
         return await PrismaService.prisma.$transaction<OrderEntity>(async tx => {
             const createdOrder = this.parsingOrderEntity(await tx.order.create({
-                data: { ...order }
+                data: { ...order}
             }).catch(err => {
                 Logger.error("데이터를 갱신하는데 실패했습니다.", err.toString(), StoreRepository)
                 throw ERROR.ServerDatabaseError
@@ -67,16 +67,14 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                 data: {
                     wallet: {
                         update: {
-                            data: {
-                                sales: {
-                                    create: {
-                                        uuid: sales_uid,
-                                        amounts: order.totalprice,
-                                        menus: order.menus,
-                                    }
-                                },
-                                point: { increment: createdOrder.totalprice }
+                            sales: {
+                                create: {
+                                    uuid: sales_uid,
+                                    amounts: order.totalprice,
+                                    menus: order.menus,
+                                }
                             },
+                            point: { increment: createdOrder.totalprice }
                         }
                     }
                 }
@@ -130,14 +128,12 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                 data: {
                     wallet: {
                         update: {
-                            data: {
-                                sales: {
-                                    delete: {
-                                        uuid: sales_uid
-                                    }
-                                },
-                                point: { decrement: deletedOrder.totalprice }
-                            }
+                            sales: {
+                                delete: {
+                                    uuid: sales_uid
+                                }
+                            },
+                            point: { decrement: deletedOrder.totalprice }
                         }
                     }
                 },
