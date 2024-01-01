@@ -11,12 +11,6 @@ import { MerchantDto } from "src/dto/merchant.dto";
 
 @Injectable()
 export class MerchantRepository implements IRepository<MerchantEntity, undefined> {
-    async test(id) {
-        await PrismaService.prisma.storewallet.update({
-            where: { uuid: id },
-            data: { point: { increment: 1} }
-        })
-    }
     async getMany(): Promise<MerchantEntity[]> {
         return (await PrismaService.prisma.merchant.findMany({
             include: { 
