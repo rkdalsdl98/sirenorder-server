@@ -1,4 +1,4 @@
-import { TypedParam, TypedQuery, TypedRoute } from "@nestia/core";
+import { TypedQuery, TypedRoute } from "@nestia/core";
 import { Controller } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { ERROR, TryCatch } from "src/common/type/response.type";

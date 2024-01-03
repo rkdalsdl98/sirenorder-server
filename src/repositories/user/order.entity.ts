@@ -4,7 +4,7 @@ export interface OrderEntity {
     readonly uuid: string
     readonly imp_uid: string
     readonly saleprice: number
-    readonly totalprice: number
+    readonly totalprice: number | string
     readonly store_uid: string
     readonly deliveryinfo: DeliveryInfo[]
     readonly menus: MenuInfo[]
@@ -22,3 +22,4 @@ export type PaymentType =
 | "none-account"
 | "card"
 | "paid"
+| "coupon"

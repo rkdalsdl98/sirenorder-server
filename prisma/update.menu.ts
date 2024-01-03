@@ -15,6 +15,7 @@ async function main() {
             id: key,
             name: menu.name,
             en_name: menu.en_name,
+            price: menu.price,
             thumbnail: menu.thumbnail,
             category: menu.category,
         }

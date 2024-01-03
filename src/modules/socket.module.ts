@@ -6,12 +6,14 @@ import { StoreRepository } from "src/repositories/store/store.repository";
 import { JwtModule } from "./jwt.module";
 import { AuthModule } from "./auth.module";
 import { SSEModule } from "./sse.module";
+import { UserModule } from "./user.module";
 
 @Module({
     imports: [
         JwtModule,
         AuthModule,
         SSEModule,
+        UserModule,
     ],
     providers: [
         SocketGateWay,

@@ -30,7 +30,6 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
                 Logger.error("유저 데이터를 불러오는데 실패했습니다.", err.toString(), UserRepository)
                 throw ERROR.ServerDatabaseError
             })).map(e => this.parsingEntity(e))
-
             const now = new Date(Date.now())
             const needUpdateUsers : Record<string, UserEntity> = {}
             const filteredUsers : UserEntity[] = users.map(user => {
@@ -159,6 +158,64 @@ export class UserRepository implements IRepository<UserEntity, undefined> {
         })
         .catch(err => {
             Logger.error("데이터를 저장하는데 실패했습니다.", err.toString(), UserRepository)
+            throw ERROR.ServerDatabaseError
+        }))
+    }
+
+    async addOrderHistory(buyer_email: string, history: OrderHistory)
+    : Promise<UserEntity> {
+        const walletUpdateQuery = {
+                update: {
+                    data: ({
+                        stars: { increment: 1 },
+                        point: { increment: Math.max(1, (history.totalprice as number) / 1000) }
+                    } satisfies { stars: Prisma.IntFieldUpdateOperationsInput, point: Prisma.IntFieldUpdateOperationsInput})
+                }
+        }
+        return this.parsingEntity(await PrismaService.prisma.user.update({
+            where: { email: buyer_email },
+            data: {
+                orderhistory: {
+                    push: { ...history }
+                },
+                wallet: typeof history.totalprice === "string" ? undefined : walletUpdateQuery
+            },
+            include: {
+                wallet: true,
+                gifts: true,
+            }
+        }).catch(err => {
+            if(err instanceof PrismaClientKnownRequestError) {
+                switch(err.code) {
+                    case "P2025":
+                    Logger.error("유저정보를 찾을 수 없어 삭제에 실패했습니다.", err.toString(), UserRepository)
+                    throw ERROR.NotFoundData
+                }
+            }
+            Logger.error("주문내역 업데이트에 실패했습니다.")
+            throw ERROR.ServerDatabaseError
+        }))
+    }
+
+    async decreaseUserPoint(buyer_email: string, use_point: number)
+    : Promise<UserEntity> {
+        return this.parsingEntity(await PrismaService.prisma.user.update({
+            where: { email: buyer_email },
+            data: {
+                wallet: {
+                    update: {
+                        data: {
+                            point: { decrement: use_point }
+                        }
+                    }
+                }
+            },
+            include: {
+                wallet: true,
+                gifts: true,
+            }
+        }).catch(err => {
+            Logger.error("유저 포인트 정보 갱신에 실패했습니다.", err.toString(), UserRepository)
             throw ERROR.ServerDatabaseError
         }))
     }

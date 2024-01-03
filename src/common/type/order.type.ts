@@ -3,9 +3,10 @@ import { DeliveryInfo, OrderEntity } from "src/repositories/user/order.entity"
 export type MenuInfo = {
     readonly name: string
     readonly en_name: string
-    readonly price: number
     readonly thumbnail: string
+    readonly detailId: number
     readonly count: number
+    readonly price: number
 }
 
 export type MenuSize = "default" | "Short" | "Tall" | "Grande" | "Venti"
@@ -38,4 +39,5 @@ NestedType<OrderEntity
 export type OrderInfo = {
     readonly menus: MenuInfo[]
     readonly deliveryinfo: DeliveryInfo[]
+    readonly point?: number
 }

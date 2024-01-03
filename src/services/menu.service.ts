@@ -17,7 +17,6 @@ export class MenuService {
     Promise<void> {
         const menus = await this.menuRepository.getMany()
         const details = await this.menuRepository.getManyDetail()
-     
         await this.redis.set("menus", menus, MenuService.name)
         .then(_=> Logger.log("메뉴정보 인 메모리 캐싱"))
         .catch(err => {

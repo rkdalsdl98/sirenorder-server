@@ -3,10 +3,10 @@
         "name": "아메리카노",
         "en_name": "Americano",
         "category": "drink",
+        "price": 2000,
         "thumbnail": "https://firebasestorage.googleapis.com/v0/b/mocatmall.appspot.com/o/americano.jpg?alt=media&token=74fa17d9-05ba-4a81-a828-d00538573b84",
         "detail": {
             "description": "메가MGC커피 블렌드 원두로 추출한 에스프레소에 물을 더해,\n풍부한 바디감을 느낄 수 있는 스탠다드 커피.",
-            "price": 2000,
             "allergys": ["고카페인 함유"],
             "nutritions": [
                 {
@@ -44,10 +44,10 @@
         "name": "따끈따끈 베이커리",
         "en_name": "Korean Streats Dessert Pack",
         "category": "food",
+        "price": 12000,
         "thumbnail": "https://firebasestorage.googleapis.com/v0/b/mocatmall.appspot.com/o/bread_pack.png?alt=media&token=1a819e37-5eb9-4e43-87e9-2cdfa7911bac",
         "detail": {
             "description": "겨울 대표 간식 팥&슈크림 붕어빵과\n앙버터호두과자, 꿀을 가득 머금은\n미니호떡으로 구성된 돌아온\n따끈따끈 간식꾸러미",
-            "price": 12000,
             "allergys": [],
             "nutritions": [
                 {
@@ -72,9 +72,9 @@
         "en_name": "Brown Sugar Bubble Milktea Latte",
         "category": "drink",
         "thumbnail": "https://firebasestorage.googleapis.com/v0/b/mocatmall.appspot.com/o/darksugarbublemilktea.jpg?alt=media&token=8523d183-6538-480c-a1ab-8e56ca08d12e",
+        "price": 3800,
         "detail": {
             "description": "타바론 얼그레이 홍차의 깊은 맛을 살린 일크티 라떼에 진한 흑당과 흑당 버블의 달콤함을 채운 음료.",
-            "price": 3800,
             "allergys": ["우유"],
             "nutritions": [
                 {
@@ -99,9 +99,9 @@
         "en_name": "Coldbrew",
         "category": "drink",
         "thumbnail": "https://firebasestorage.googleapis.com/v0/b/mocatmall.appspot.com/o/coldbrew.jpg?alt=media&token=4779d5ee-70b8-41b9-9345-a524063f1cf2",
+        "price": 3300,
         "detail": {
             "description": "차가운 물에 장시간 우려내 깔끔한 목넘김을 느낄 수 있는 콜드브루.",
-            "price": 3300,
             "allergys": ["우유"],
             "nutritions": [
                 {

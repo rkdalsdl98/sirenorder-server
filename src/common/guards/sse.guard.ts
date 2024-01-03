@@ -14,7 +14,7 @@ export class SSEGuard implements CanActivate {
         const req = context.switchToHttp().getRequest()
         const reqAddress = req.headers['x-forwarded-for'] ||  req.connection.remoteAddress
         const token = this._extractTokenFromHeader(req)
-        
+
         if(token === null) throw ERROR.UnAuthorized
         try {
             const payload = await this._getPayload(token)

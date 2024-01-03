@@ -55,7 +55,7 @@ export class UserService {
             throw ERROR.FailedSendMail
         }))
         .catch(async err => {
-            await this.redis.delete(code, UserService.name)
+            this.redis.delete(code, UserService.name)
             throw err
         })
         
@@ -76,15 +76,13 @@ export class UserService {
             throw error
         }
 
-        await this.redis.delete(code, UserService.name)
-        .then(async _=> {
-            await this.redis.set(
-                data.email, 
-                data, 
-                UserService.name,
-                600,
-            )
-        })
+        this.redis.delete(code, UserService.name)
+        this.redis.set(
+            data.email, 
+            data, 
+            UserService.name,
+            600,
+        )
         return true
     }
     
@@ -100,8 +98,8 @@ export class UserService {
             uuid: this.auth.getRandUUID(), 
             wallet_uid: this.auth.getRandUUID(), 
         })
-        await this._upsertCache(createdUser)
-        .then(async _=> await this.redis.delete(email, UserService.name))
+        this._upsertCache(createdUser)
+        this.redis.delete(email, UserService.name)
         
         return true
     }
@@ -127,7 +125,8 @@ export class UserService {
                 accesstoken: accesstoken,
                 refreshtoken: refreshtoken,
             }, findUser.email)
-            await this._upsertCache(findUser)
+            this._upsertCache(findUser)
+
             return { 
                 tel: findUser.tel,
                 email: findUser.email,
@@ -185,7 +184,7 @@ export class UserService {
                     refreshtoken: refreshtoken,
                 }, findUser.email)
 
-                await this._upsertCache(user)
+                this._upsertCache(user)
                 return { ...user } as UserDto
             }
 
@@ -194,7 +193,7 @@ export class UserService {
                 accesstoken: null,
                 refreshtoken: null,
             }, findUser.email)
-            await this._upsertCache(user)
+            this._upsertCache(user)
             // 디비에 저장되어 있는 RefreshToken이 오염될 경우에만
             // 에러를 스로잉 함
             var error = ERROR.UnAuthorized
@@ -210,6 +209,24 @@ export class UserService {
 
     async deleteUser(email: string) {
         await this.userRepository.deleteBy(email)
+    }
+
+    async addOrderHistory(buyer_email: string, history: OrderHistory)
+    : Promise<void> {
+        const user = await this.userRepository.addOrderHistory(
+            buyer_email,
+            history,
+        )
+        this._upsertCache(user)
+    }
+
+    async decreaseUserPoint(buyer_email: string, use_point?: number)
+    : Promise<void> {
+        const user = await this.userRepository.decreaseUserPoint(
+            buyer_email,
+            use_point ?? 0,
+        )
+        this._upsertCache(user)
     }
 
     /**

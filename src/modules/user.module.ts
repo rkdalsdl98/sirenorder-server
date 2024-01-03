@@ -23,5 +23,6 @@ import { AuthModule } from "./auth.module";
         RedisService,
     ],
     controllers: [UserController],
+    exports: [UserService]
 })
 export class UserModule {}

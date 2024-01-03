@@ -17,7 +17,6 @@ async function main() {
                 data: {
                     allergys: detail.allergys,
                     description: detail.description,
-                    price: detail.price,
                 },
             })
         }

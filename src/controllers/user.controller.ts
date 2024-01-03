@@ -92,7 +92,9 @@ export class UserController {
     @TypedRoute.Post("login/token")
     @UseGuards(AuthGuard)
     async tokenLogin(
-        @AuthDecorator.GetTokenAndPayload() data: { payload: any, token:string }
+        @AuthDecorator.GetTokenAndPayload() data: 
+        | { payload: any, token: string }
+        | { payload: any }
     ) : Promise<TryCatch<
     UserDto,
     | typeof ERROR.ServerDatabaseError
@@ -102,8 +104,12 @@ export class UserController {
         try {
             if("email" in data.payload 
             && "authorized" in data.payload) {
+                const authorized = data.payload.authorized as boolean
                 let result : UserDto
-                if("token" in data.payload) result = await this.userService.checkRefresh(data.payload.email, data.payload.token)
+                if(!authorized) {
+                    const needCheckData = { ...data } as { payload: any, token: string }
+                    result = await this.userService.checkRefresh(needCheckData.payload.email, needCheckData.token)
+                }
                 else result = await this.userService.loginByEmail(data.payload.email)
                 return {
                     data: result,

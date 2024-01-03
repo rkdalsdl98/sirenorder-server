@@ -37,7 +37,7 @@ export class MerchantService {
         }).then(async merchant => {
             const store = merchant.store
             const caches = await this.redis.get<StoreCache[]>("stores", MerchantService.name) ?? []
-            await this.redis.set(
+            this.redis.set(
                 "stores", [...caches, 
                 {...store, storeId: store.uuid, isOpen: false} as StoreCache], 
                 MerchantService.name

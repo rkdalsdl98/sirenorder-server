@@ -2,6 +2,7 @@ import { TypedBody, TypedQuery, TypedRoute } from "@nestia/core";
 import { Controller, UseGuards } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { AuthDecorator } from "src/common/decorators/auth.decorator";
+import { AuthGuard } from "src/common/guards/auth.guard";
 import { CouponGuard } from "src/common/guards/coupon.guard";
 import { ERROR, FailedResponse, TryCatch } from "src/common/type/response.type";
 import { CouponBody, CouponQuery } from "src/query/coupon.query";
@@ -34,6 +35,42 @@ export class CouponController {
                 data: result,
                 status: 201,
             }
+        } catch(e) { return e }
+    }
+
+    @TypedRoute.Post("publish/stamp")
+    @UseGuards(AuthGuard)
+    async publishStampCoupon(
+        @AuthDecorator.GetTokenAndPayload() data: 
+        | { payload: any, token: string }
+        | { payload: any }
+    ) 
+    : Promise<TryCatch<
+    | SimpleCouponEntity
+    | null,
+    | typeof ERROR.NotFoundData
+    | typeof ERROR.ServerDatabaseError
+    | typeof ERROR.ServiceUnavailableException
+    >> {
+        try {
+            if("email" in data.payload
+            && "authorized" in data.payload) {
+                const authorized = data.payload.authorized as boolean
+                if(authorized) {
+                    const result = 
+                    await 
+                    this.couponService
+                    .publishAndRegisterStampCoupon(data.payload.email)
+                    return {
+                        data: result,
+                        status: 201,
+                    }
+                }
+                var err = ERROR.UnAuthorized
+                err.substatus = "ExpiredToken"
+                throw err
+            }
+            throw ERROR.UnAuthorized
         } catch(e) { return e }
     }
 

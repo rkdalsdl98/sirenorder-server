@@ -26,6 +26,9 @@ import { OrderState, RefuseOrder } from "../type/order.type";
 import { SSEService } from "src/services/sse.service";
 import { GiftNotifySubject, OrderNotifySubject } from "../type/sse.type";
 import { GiftEntity } from "src/repositories/user/gift.entity";
+import { UserRepository } from "src/repositories/user/user.repository";
+import { UserService } from "src/services/user.service";
+import { OrderHistory } from "src/repositories/user/user.entity";
 
 dotenv.config()
 const port : number = parseInt(process.env.SOCKET_PORT ?? "3001")
@@ -39,6 +42,7 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     constructor(
         private readonly merchantRepository: MerchantRepository,
         private readonly storeRepository: StoreRepository,
+        private readonly userService: UserService,
         private readonly auth: AuthService,
         private readonly redis: RedisService,
         private readonly sseService: SSEService,
@@ -61,12 +65,21 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     | typeof ERROR.ServerCacheError
     | typeof ERROR.NotFoundData>> {
         try {
-            const buyer_email = await PortOneMethod.finishOrder({
+            const { buyer_email, totalprice, history } = await PortOneMethod.finishOrder({
                 order_uid: data,
                 redis: this.redis,
-                repository: this.storeRepository,
+                service: this.userService,
             })
-            this.pushStateMessage(buyer_email, "finish")
+            
+            this.pushStateMessage(
+                buyer_email, 
+                "finish",
+                {
+                    increase_point: Math.max(1, (totalprice as number) / 1000),
+                    increase_stars: 1,
+                    history,
+                }
+            )
             return {
                 result: true,
                 message:"finish",
@@ -200,12 +213,19 @@ implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     pushStateMessage(
         buyer_email: string, 
         order_state: OrderState,
-    ) {
+        args?: { 
+            increase_point?: number, 
+            increase_stars?: number,
+            history?: OrderHistory,
+    }) {
         this.sseService.pushMessage({
             notify_type: "order-notify",
             subject: {
                 order_state,
                 receiver_email: buyer_email,
+                increase_point: args?.increase_point,
+                increase_stars: args?.increase_stars,
+                history: args?.history,
             } as OrderNotifySubject
         })
     }

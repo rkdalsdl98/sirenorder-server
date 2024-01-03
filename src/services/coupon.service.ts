@@ -9,7 +9,7 @@ import { UserEntity } from "src/repositories/user/user.entity";
 import { GiftInfo } from "src/common/type/gift.type";
 import { GiftEntity } from "src/repositories/user/gift.entity";
 import { SSEService } from "./sse.service";
-import { UserNotifySubject } from "src/common/type/sse.type";
+import { SSESubject, UserNotifySubject } from "src/common/type/sse.type";
 dotenv.config()
 
 const coupon_secret = process.env.COUPON_SECRET
@@ -49,30 +49,85 @@ export class CouponService {
         return code
     }
 
+    /**
+     * 2000원 상당 아메리카노 한잔 쿠폰 발행
+     * @returns 
+     */
+    async publishAndRegisterStampCoupon(current_user_email: string)
+    : Promise<SimpleCouponEntity> {
+        const code = await this.publishCoupon({
+            menuinfo: {
+                "name": "아메리카노",
+                "en_name": "Americano",
+                "detailId": 1,
+                "thumbnail": "https://firebasestorage.googleapis.com/v0/b/mocatmall.appspot.com/o/americano.jpg?alt=media&token=74fa17d9-05ba-4a81-a828-d00538573b84",
+                "count": 1,
+                "price": 2000,
+            },
+        })
+        const coupon = await this.registerCoupon(
+            current_user_email, 
+            code,
+            true,
+        )
+        return coupon
+    }
+
     async registerCoupon(
         current_user_email: string,
         code: string,
-    )
-    : Promise<SimpleCouponEntity> {
-        const { coupon } = await this._validate(code)
+        isStamp?: boolean
+    ) : Promise<SimpleCouponEntity> {
+        const data = await this._validate(code)
         const simple_data = {
             code,
-            expiration_period: coupon.expiration_period,
-            menu_name: coupon.menuinfo.name,
-            thumbnail: coupon.menuinfo.thumbnail,
+            expiration_period: data.coupon.expiration_period,
+            menu_name: data.coupon.menuinfo.name,
+            thumbnail: data.coupon.menuinfo.thumbnail,
         } as SimpleCouponEntity
-        const registered = await this.couponRepoistory.registerCoupon({
-            current_user_email,
-            coupon: simple_data,
-        })
-        if(!registered) throw ERROR.ServiceUnavailableException
-
-        await this._updateCouponFromUser(
-            current_user_email,
-            code,
-            coupon,
-        )
-        return simple_data
+        try {
+            const registered = await this.couponRepoistory.registerCoupon({
+                current_user_email,
+                coupon: simple_data,
+                isStamp: isStamp
+            })
+            if(!registered) {
+                if(isStamp !== undefined && isStamp) {
+                    await this.deleteCoupon({
+                        user_email: current_user_email,
+                        code,
+                        message: "스탬프의 개수가 모자라 쿠폰발행이 취소됩니다",
+                        title: "스탬프 개수 부족",
+                    })
+                    throw ERROR.Accepted
+                }
+                throw ERROR.Accepted
+            }
+    
+            this._updateCouponFromUser(
+                current_user_email,
+                code,
+                data.coupon,
+            )
+            this.sseService.pushMessage({
+                notify_type: "user-notify",
+                subject: {
+                    message: "스탬프를 사용해 쿠폰을 지급 받으셨습니다\n쿠폰함을 확인 해주세요!",
+                    title: "쿠폰발행",
+                    receiver_email: current_user_email,
+                } satisfies UserNotifySubject
+            } satisfies SSESubject)
+            return simple_data
+        } catch(e) {
+            if(typeof ERROR.Accepted !== typeof e) {
+                await this.deleteCoupon({
+                    user_email: current_user_email,
+                    code,
+                    message: "쿠폰등록에 실패했습니다"
+                })
+            }
+            throw e
+        }
     }
 
     
@@ -141,6 +196,7 @@ export class CouponService {
         user_email: string,
         code: string,
         message: string,
+        title?: string,
     })
     : Promise<boolean> {
         const { hash } = this.auth.encryption(args.code, coupon_secret, 32)
@@ -148,7 +204,7 @@ export class CouponService {
             notify_type: "user-notify",
             subject: {
                 message: args.message,
-                title: "쿠폰회수",
+                title: args.title ?? "쿠폰회수",
                 receiver_email: args.user_email,
             } as UserNotifySubject
         })
@@ -171,8 +227,8 @@ export class CouponService {
             user_email,
             encryption_code,
             gift_uid,
-            ).then(async _=> {
-                await this._removeGiftFromUser(user_email)
+            ).then(_=> {
+                this._removeGiftFromUser(user_email)
                 return true
             })
     }
@@ -204,12 +260,10 @@ export class CouponService {
             code,
             encryption_code,
         )
-        .then(async _=> {
-            await this._removeCouponFromUser(
-                user_email,
-                code,
-            )
-        })
+        this._removeCouponFromUser(
+            user_email,
+            code,
+        )
     }
     
     private _createExpirationPeriod(day?: number) : Date {
@@ -264,6 +318,7 @@ export class CouponService {
         user_email: string,
         code: string,
         coupon: CouponEntity,
+        isStamp?: boolean
     ) : Promise<void> {
         const caches = await this.redis.get<UserEntity[]>("users", CouponService.name)
         const user = caches?.find(u => u.email === user_email)
@@ -279,6 +334,7 @@ export class CouponService {
             await this.redis.set("users", 
             [...after, {
                 ...user,
+                wallet: { stars: (isStamp !== undefined && isStamp) ? 0 : user.wallet?.stars },
                 coupons: user.coupons,
             } as UserEntity], 
                 CouponService.name

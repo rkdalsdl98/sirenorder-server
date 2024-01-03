@@ -14,7 +14,6 @@ async function main() {
         const menuDetail = {
             id: key,
             description: menu.detail.description,
-            price: menu.detail.price,
             allergys: menu.detail.allergys,
             nutritions: {
                 create: [
@@ -43,6 +42,7 @@ async function main() {
             en_name: menu.en_name,
             thumbnail: menu.thumbnail,
             category: menu.category,
+            price: menu.price,
             detail: {
                 connectOrCreate: {
                     create: menuDetail,

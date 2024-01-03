@@ -67,18 +67,51 @@ export class CouponRepository implements IRepository<CouponEntity, unknown> {
     async registerCoupon(args: {
         current_user_email: string,
         coupon: SimpleCouponEntity,
+        isStamp?: boolean,
     }) : Promise<boolean> {
-        return !!(await PrismaService.prisma.user.update({
-            where: { email: args.current_user_email },
-            data: {
-                coupons: {
-                    push: { ...args.coupon } as Prisma.InputJsonValue
+        return await PrismaService.prisma.$transaction(async tx => {
+            let useStamp = false
+            if(args.isStamp !== undefined && args.isStamp) {
+                const user = await tx.user.findUnique({
+                    where: { email: args.current_user_email },
+                    include: { wallet: true }
+                })
+                .catch(err => {
+                    let error = ERROR.ServiceUnavailableException
+                    if(err instanceof PrismaClientKnownRequestError) {
+                        switch(err.code) {
+                            case "P2025":
+                                error = ERROR.NotFoundData
+                                break 
+                        }
+                    }
+                    throw error
+                })
+                if(user!.wallet!.stars < 6) {
+                    return false
                 }
+                useStamp = true
             }
-        }).catch(err => {
-            Logger.error("사용자의 쿠폰정보 업데이트를 실패했습니다.", CouponRepository.name)
-            throw ERROR.ServerDatabaseError
-        }))
+            return !!(await tx.user.update({
+                where: { email: args.current_user_email },
+                data: {
+                    coupons: {
+                        push: { ...args.coupon } as Prisma.InputJsonValue
+                    },
+                    wallet: useStamp 
+                    ? {
+                        update: {
+                            stars: { set: 0 }
+                        }
+                    } 
+                    : {}
+                },
+                include: { wallet: true }
+            }).catch(err => {
+                Logger.error("사용자의 쿠폰정보 업데이트를 실패했습니다.", CouponRepository.name)
+                throw ERROR.ServerDatabaseError
+            }))
+        })
     }
 
     async updateGift(args: {
@@ -194,16 +227,15 @@ export class CouponRepository implements IRepository<CouponEntity, unknown> {
                     data: { coupons }
                 })
                 .catch(err => {
-                    Logger.error("사용자의 쿠폰폐기를 싪패했습니다.", CouponRepository.name)
+                    if(err instanceof PrismaClientKnownRequestError) {
+                        return
+                    }
+                    Logger.error("사용자의 쿠폰폐기를 실패했습니다.", CouponRepository.name)
                     throw ERROR.ServerDatabaseError
                 })
             }
             
             return this.parsingEntity(deleteCoupon)
-        })
-        .catch(err => {
-            Logger.error("트랜잭션 수행중 오류가 발생했습니다.", CouponRepository.name)
-            throw err
         })
     }
 
