@@ -103,20 +103,25 @@ export class CouponService {
                 }
                 throw ERROR.Accepted
             }
-    
+
+            let message = "쿠폰을 지급 받으셨습니다\n쿠폰함을 확인 해주세요!"
+            if(isStamp !== undefined && isStamp) {
+                message += "스탬프를 사용해"
+            }
+            this.sseService.pushMessage({
+                notify_type: "user-notify",
+                subject: {
+                    message,
+                    title: "쿠폰발행",
+                    receiver_email: current_user_email,
+                } satisfies UserNotifySubject
+            } satisfies SSESubject)
+            
             this._updateCouponFromUser(
                 current_user_email,
                 code,
                 data.coupon,
             )
-            this.sseService.pushMessage({
-                notify_type: "user-notify",
-                subject: {
-                    message: "스탬프를 사용해 쿠폰을 지급 받으셨습니다\n쿠폰함을 확인 해주세요!",
-                    title: "쿠폰발행",
-                    receiver_email: current_user_email,
-                } satisfies UserNotifySubject
-            } satisfies SSESubject)
             return simple_data
         } catch(e) {
             if(typeof ERROR.Accepted !== typeof e) {
@@ -136,13 +141,24 @@ export class CouponService {
             menuinfo: giftInfo.menu,
             expiration_day: 1,
         })
-        const coupon = await this.registerCoupon(giftInfo.to, code)
+        const data = await this._validate(code)
+        const coupon = {
+            code,
+            expiration_period: data.coupon.expiration_period,
+            menu_name: data.coupon.menuinfo.name,
+            thumbnail: data.coupon.menuinfo.thumbnail,
+        } as SimpleCouponEntity
         const gift_uid = this.auth.getRandUUID()
         await this.couponRepoistory.updateGift({
             uuid: gift_uid,
             gift: giftInfo,
             coupon,
         })
+        this._updateCouponFromUser(
+            giftInfo.to,
+            code,
+            data.coupon,
+        )
         return {
             coupon,
             from: giftInfo.from,
@@ -168,11 +184,11 @@ export class CouponService {
         )
     }
             
-    async useCoupon(
+    async checkValidateAndUpdateCoupon(
         user_email: string, 
         code: string
     ) 
-    : Promise<{ message: string, result: boolean | CouponEntity }> {
+    : Promise<boolean | CouponEntity> {
         const { hash, coupon } = await this._validate(code)
         try {
             await this._deleteCoupon(
@@ -180,15 +196,9 @@ export class CouponService {
                 code, 
                 hash,
             )
-            return {
-                message: "성공적으로 주문요청을 보냇습니다.",
-                result: coupon
-            }
+            return coupon
         } catch(e) {
-            return {
-                message: "쿠폰사용중 오류가 발생해 주문이 취소되었습니다.",
-                result: false,
-            }
+            return false
         }
     }
                 
@@ -223,14 +233,15 @@ export class CouponService {
         encryption_code: string, 
         gift_uid: string
     ) {
-        return await this.couponRepoistory.deleteGiftCoupon(
+        const result = !!(await this.couponRepoistory.deleteGiftCoupon(
             user_email,
             encryption_code,
             gift_uid,
-            ).then(_=> {
-                this._removeGiftFromUser(user_email)
-                return true
-            })
+        ))
+        if(result) {
+            this._removeGiftFromUser(user_email)
+        }
+        return result
     }
 
     private async _validate(code: string)

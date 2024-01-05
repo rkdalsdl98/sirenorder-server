@@ -53,23 +53,18 @@ export namespace PortOneMethod {
         order_uid,
         redis,
         service,
+        repository,
     }: {
         order_uid: string,
         redis: RedisService,
         service: UserService,
+        repository: StoreRepository,
     }) : Promise<{ 
         buyer_email: string, 
         totalprice: number | string
         history: OrderHistory
     }> => { 
-        const order = await findOrderByUUID({
-            order_uid,
-            redis,
-        }).then(async res => {
-            await removeOrderById({order_uid, redis})
-            return res
-        }) 
-
+        const order = await removeOrderById({order_uid, redis, repository})
         const store : StoreCache | null | undefined = await redis.get<StoreCache[]>(
             "stores",
             logPath,
@@ -78,13 +73,7 @@ export namespace PortOneMethod {
             return res.find(s => s.storeId === order.store_uid)
         })
         if(store === null || store === undefined) throw ERROR.Accepted
-        
-        const user : UserEntity | null | undefined = await redis.get<UserEntity[]>("users", logPath)
-        .then(res => {
-            if(res === null) return null
-            return res.find(u => u.email === order.buyer_email)
-        })
-        if(user === null || user === undefined) throw ERROR.Accepted
+
         const history = {
             imp_uid: order.imp_uid,
             menus: order.menus,
@@ -104,15 +93,18 @@ export namespace PortOneMethod {
     export const removeOrderById = async ({
         redis,
         order_uid,
+        repository,
     } : {
         redis: RedisService,
         order_uid: string,
+        repository: StoreRepository,
     }) : Promise<RegisteredOrder> => {
         const order = await findOrderByUUID({
             order_uid,
             redis,
         })
-        await redis.delete(order_uid, logPath)
+        await repository.deleteOrder(order_uid, order.sales_uid)
+        redis.delete(order_uid, logPath)
         return order
     }
 

@@ -50,8 +50,6 @@ export class StoreService {
     })
     : Promise<void> {
         const order: OrderDto = await PortOneMethod.findOrder(imp_uid)
-        let { type } = JSON.parse(order.custom_data)
-
         const userUUIDs = { order_uid, imp_uid }
         const portOneUUIDs = { order_uid: order.merchant_uid, imp_uid: order.imp_uid }
         if(!this._equalUUIds(portOneUUIDs, userUUIDs)) {
@@ -60,7 +58,8 @@ export class StoreService {
             err.substatus = "ForgeryData"
             throw err
         }
-
+        
+        let { type } = JSON.parse(order.custom_data)
         switch(type) {
             case "order":
                 await this.sendOrder({
@@ -91,14 +90,14 @@ export class StoreService {
                 result: false,
             }
         }
-        const useResult = await this.couponService.useCoupon(
+        const useResult = await this.couponService.checkValidateAndUpdateCoupon(
             user_email,
             code,
         )
-        if(typeof useResult.result === "boolean") {
+        if(typeof useResult === "boolean") {
             return {
-                message: useResult.message,
-                result: useResult.result,
+                message: "유효하지 않은 쿠폰사용으로 주문이 취소되었습니다",
+                result: useResult,
             }
         } else {
             const uuid = this.authService.getRandUUID()
@@ -106,7 +105,7 @@ export class StoreService {
             const order = {
                 deliveryinfo: [deliveryinfo],
                 imp_uid: uuid.substring(0, 12),
-                menus: [useResult.result.menuinfo],
+                menus: [useResult.menuinfo],
                 saleprice: 0,
                 store_uid: storeId,
                 sales_uid,
@@ -197,7 +196,7 @@ export class StoreService {
                 throw err
             } else if(!store.socketId) {
                 this._refuseOrder(order_uid)
-                throw ERROR.NotFound
+                throw ERROR.Forbidden
             }
 
             const { menus, deliveryinfo, point } = orderInfo

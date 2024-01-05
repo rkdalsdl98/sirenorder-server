@@ -29,7 +29,7 @@ export namespace SocketEventHandler {
                     }
                     return c
                 })
-                await redis.set("stores", 
+                redis.set("stores", 
                     after ?? [{ ...store, isOpen: true, socketId }],
                     logPath
                 )
@@ -52,7 +52,7 @@ export namespace SocketEventHandler {
                     }
                     return c
                 })
-                await options.redis.set("stores", 
+                options.redis.set("stores", 
                     caches === undefined ? [] : caches,
                     logPath
                 )
