@@ -34,11 +34,11 @@
 
 ### 2.1 ERD  
 
-<img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/134096be-e23a-41a3-b4ea-28a4cf9530dd" width="800" height="908">  
+<img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/134096be-e23a-41a3-b4ea-28a4cf9530dd">  
 
 ## 3 Diagram  
 
-<div align="center">
+<div>
   <h3> 3.1 User</h3>  
   <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/15e379b9-b262-442f-86b6-5790d4bbc1e7"> 
 
