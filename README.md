@@ -32,11 +32,30 @@
 
 ## 2 DB  
 
-### 2.1 Diagram (업로드 예정)  
+### 2.1 ERD  
 
-## 3 CI/CD  
+<img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/134096be-e23a-41a3-b4ea-28a4cf9530dd" width="800" height="908">  
+
+## 3 Diagram  
+
+<div align="center">
+  <h3> 3.1 User</h3>  
+  <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/15e379b9-b262-442f-86b6-5790d4bbc1e7"> 
+
+  <h3> 3.2 Merchant & Store</h3>   
+  <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/5677be6d-c319-471a-92a3-1408ea39dfcc"> <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/c2389ff4-adab-4527-8bef-8cfded265e09">  
+  <h3> 3.3 SSE</h3>  
+  <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/6f60c0e1-cfcb-4ea2-80ec-186335af077b"> <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/77210c80-42cb-4c76-aa29-082cd135f142">   
+  <h3> 3.4 Socket</h3>  
+  <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/4afaa450-ee98-473e-b1a4-7f55fe6c2340">  
+  <h3> 3.5 Payment</h3>  
+  <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/86cdfea0-bfff-4b20-ab51-98b074872daf">
+</div>  
+
+## 4 CI/CD  
 * GitHub Action (CI)
 * Docker (CD)  
+
 ### 부가적인 내용  
 > 현재 git action은 빌드 테스트와 그 결과를 slack에 메세지를 보내주는 형태만 취해 있으며 Docker또한 환경설정이 되어 있지 않습니다. -2023.12.30  
 
