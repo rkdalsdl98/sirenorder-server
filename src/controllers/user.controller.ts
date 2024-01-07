@@ -105,7 +105,7 @@ export class UserController {
                 let result : UserDto
                 if(!authorized) {
                     const needCheckData = { ...data } as { payload: any, token: string }
-                    result = await this.userService.checkRefresh(needCheckData.payload.email, needCheckData.token)
+                    result = await this.userService.checkRefresh(needCheckData.payload.email)
                 }
                 else result = await this.userService.loginByEmail(data.payload.email)
                 return {

@@ -26,7 +26,6 @@ import { OrderState, RefuseOrder } from "../type/order.type";
 import { SSEService } from "src/services/sse.service";
 import { GiftNotifySubject, OrderNotifySubject } from "../type/sse.type";
 import { GiftEntity } from "src/repositories/user/gift.entity";
-import { UserRepository } from "src/repositories/user/user.repository";
 import { UserService } from "src/services/user.service";
 import { OrderHistory } from "src/repositories/user/user.entity";
 

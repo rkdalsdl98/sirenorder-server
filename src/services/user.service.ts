@@ -161,9 +161,9 @@ export class UserService {
      * @param token 
      * @returns User
      */
-    async checkRefresh(email: string, token: string) : 
+    async checkRefresh(email: string) : 
     Promise<UserDto> {
-        const findUser = await this._findUserWithToken({ email, token })
+        const findUser = await this._findUser(email)
         if(!findUser.refreshtoken) {
             var error = ERROR.UnAuthorized
             error.substatus = "ExpiredToken"
@@ -176,7 +176,10 @@ export class UserService {
                 throw err
             })
 
-            if(payload !== null) {
+            if(payload !== null 
+                && "email" in payload 
+                && payload.email === email
+            ) {
                 // accesstoken과 refreshtoken 갱신
                 const { accesstoken, refreshtoken } = await this._publishTokens(findUser.email)
                 const user = await this.userRepository.updateBy({
@@ -275,29 +278,6 @@ export class UserService {
             if(!found) caches.push(cache)
             await this.redis.set("users", caches, UserService.name)
         }
-    }
-
-    /**
-     * 유저정보조회
-     * 
-     * AccessToken이 만료된 경우 사용
-     * @param email 
-     * @param token
-     * @returns User
-     */
-    private async _findUserWithToken(args : Partial<{ email: string, token: string }>) :
-    Promise<UserEntity> {
-        const user : UserEntity = await this._findUser(args.email)
-
-        var error
-        if(user.accesstoken === args.token) return user
-        else if(user.accesstoken === null) error = ERROR.NotFoundData
-        else {
-            error = ERROR.UnAuthorized
-            error.substatus = "ForgeryData"
-        }
-
-        throw error
     }
 
     /**
