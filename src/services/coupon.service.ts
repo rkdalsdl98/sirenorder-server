@@ -9,7 +9,7 @@ import { UserEntity } from "src/repositories/user/user.entity";
 import { GiftInfo } from "src/common/type/gift.type";
 import { GiftEntity } from "src/repositories/user/gift.entity";
 import { SSEService } from "./sse.service";
-import { UserNotifySubject } from "src/common/type/sse.type";
+import { SSESubject, UserNotifySubject } from "src/common/type/sse.type";
 dotenv.config()
 
 const coupon_secret = process.env.COUPON_SECRET
@@ -49,30 +49,90 @@ export class CouponService {
         return code
     }
 
+    /**
+     * 2000원 상당 아메리카노 한잔 쿠폰 발행
+     * @returns 
+     */
+    async publishAndRegisterStampCoupon(current_user_email: string)
+    : Promise<SimpleCouponEntity> {
+        const code = await this.publishCoupon({
+            menuinfo: {
+                "name": "아메리카노",
+                "en_name": "Americano",
+                "detailId": 1,
+                "thumbnail": "https://firebasestorage.googleapis.com/v0/b/mocatmall.appspot.com/o/americano.jpg?alt=media&token=74fa17d9-05ba-4a81-a828-d00538573b84",
+                "count": 1,
+                "price": 2000,
+            },
+        })
+        const coupon = await this.registerCoupon(
+            current_user_email, 
+            code,
+            true,
+        )
+        return coupon
+    }
+
     async registerCoupon(
         current_user_email: string,
         code: string,
-    )
-    : Promise<SimpleCouponEntity> {
-        const { coupon } = await this._validate(code)
+        isStamp?: boolean
+    ) : Promise<SimpleCouponEntity> {
+        const data = await this._validate(code)
         const simple_data = {
             code,
-            expiration_period: coupon.expiration_period,
-            menu_name: coupon.menuinfo.name,
-            thumbnail: coupon.menuinfo.thumbnail,
+            expiration_period: data.coupon.expiration_period,
+            menu_name: data.coupon.menuinfo.name,
+            thumbnail: data.coupon.menuinfo.thumbnail,
         } as SimpleCouponEntity
-        const registered = await this.couponRepoistory.registerCoupon({
-            current_user_email,
-            coupon: simple_data,
-        })
-        if(!registered) throw ERROR.ServiceUnavailableException
+        try {
+            const registered = await this.couponRepoistory.registerCoupon({
+                current_user_email,
+                coupon: simple_data,
+                isStamp: isStamp
+            })
+            if(!registered) {
+                if(isStamp !== undefined && isStamp) {
+                    await this.deleteCoupon({
+                        user_email: current_user_email,
+                        code,
+                        message: "스탬프의 개수가 모자라 쿠폰발행이 취소됩니다",
+                        title: "스탬프 개수 부족",
+                    })
+                    throw ERROR.Accepted
+                }
+                throw ERROR.Accepted
+            }
 
-        await this._updateCouponFromUser(
-            current_user_email,
-            code,
-            coupon,
-        )
-        return simple_data
+            let message = "쿠폰을 지급 받으셨습니다\n쿠폰함을 확인 해주세요!"
+            if(isStamp !== undefined && isStamp) {
+                message += "스탬프를 사용해"
+            }
+            this.sseService.pushMessage({
+                notify_type: "user-notify",
+                subject: {
+                    message,
+                    title: "쿠폰발행",
+                    receiver_email: current_user_email,
+                } satisfies UserNotifySubject
+            } satisfies SSESubject)
+            
+            this._updateCouponFromUser(
+                current_user_email,
+                code,
+                data.coupon,
+            )
+            return simple_data
+        } catch(e) {
+            if(typeof ERROR.Accepted !== typeof e) {
+                await this.deleteCoupon({
+                    user_email: current_user_email,
+                    code,
+                    message: "쿠폰등록에 실패했습니다"
+                })
+            }
+            throw e
+        }
     }
 
     
@@ -81,13 +141,24 @@ export class CouponService {
             menuinfo: giftInfo.menu,
             expiration_day: 1,
         })
-        const coupon = await this.registerCoupon(giftInfo.to, code)
+        const data = await this._validate(code)
+        const coupon = {
+            code,
+            expiration_period: data.coupon.expiration_period,
+            menu_name: data.coupon.menuinfo.name,
+            thumbnail: data.coupon.menuinfo.thumbnail,
+        } as SimpleCouponEntity
         const gift_uid = this.auth.getRandUUID()
         await this.couponRepoistory.updateGift({
             uuid: gift_uid,
             gift: giftInfo,
             coupon,
         })
+        this._updateCouponFromUser(
+            giftInfo.to,
+            code,
+            data.coupon,
+        )
         return {
             coupon,
             from: giftInfo.from,
@@ -113,11 +184,11 @@ export class CouponService {
         )
     }
             
-    async useCoupon(
+    async checkValidateAndUpdateCoupon(
         user_email: string, 
         code: string
     ) 
-    : Promise<{ message: string, result: boolean | CouponEntity }> {
+    : Promise<boolean | CouponEntity> {
         const { hash, coupon } = await this._validate(code)
         try {
             await this._deleteCoupon(
@@ -125,15 +196,9 @@ export class CouponService {
                 code, 
                 hash,
             )
-            return {
-                message: "성공적으로 주문요청을 보냇습니다.",
-                result: coupon
-            }
+            return coupon
         } catch(e) {
-            return {
-                message: "쿠폰사용중 오류가 발생해 주문이 취소되었습니다.",
-                result: false,
-            }
+            return false
         }
     }
                 
@@ -141,6 +206,7 @@ export class CouponService {
         user_email: string,
         code: string,
         message: string,
+        title?: string,
     })
     : Promise<boolean> {
         const { hash } = this.auth.encryption(args.code, coupon_secret, 32)
@@ -148,7 +214,7 @@ export class CouponService {
             notify_type: "user-notify",
             subject: {
                 message: args.message,
-                title: "쿠폰회수",
+                title: args.title ?? "쿠폰회수",
                 receiver_email: args.user_email,
             } as UserNotifySubject
         })
@@ -167,14 +233,15 @@ export class CouponService {
         encryption_code: string, 
         gift_uid: string
     ) {
-        return await this.couponRepoistory.deleteGiftCoupon(
+        const result = !!(await this.couponRepoistory.deleteGiftCoupon(
             user_email,
             encryption_code,
             gift_uid,
-            ).then(async _=> {
-                await this._removeGiftFromUser(user_email)
-                return true
-            })
+        ))
+        if(result) {
+            this._removeGiftFromUser(user_email)
+        }
+        return result
     }
 
     private async _validate(code: string)
@@ -204,12 +271,10 @@ export class CouponService {
             code,
             encryption_code,
         )
-        .then(async _=> {
-            await this._removeCouponFromUser(
-                user_email,
-                code,
-            )
-        })
+        this._removeCouponFromUser(
+            user_email,
+            code,
+        )
     }
     
     private _createExpirationPeriod(day?: number) : Date {
@@ -264,6 +329,7 @@ export class CouponService {
         user_email: string,
         code: string,
         coupon: CouponEntity,
+        isStamp?: boolean
     ) : Promise<void> {
         const caches = await this.redis.get<UserEntity[]>("users", CouponService.name)
         const user = caches?.find(u => u.email === user_email)
@@ -279,6 +345,7 @@ export class CouponService {
             await this.redis.set("users", 
             [...after, {
                 ...user,
+                wallet: { stars: (isStamp !== undefined && isStamp) ? 0 : user.wallet?.stars },
                 coupons: user.coupons,
             } as UserEntity], 
                 CouponService.name

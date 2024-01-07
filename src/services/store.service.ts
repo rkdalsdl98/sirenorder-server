@@ -13,12 +13,14 @@ import { OrderInfo, RegisteredOrder } from "src/common/type/order.type";
 import { CouponService } from "./coupon.service";
 import { GiftInfo } from "src/common/type/gift.type";
 import { AuthService } from "./auth.service";
+import { UserService } from "./user.service";
 
 @Injectable()
 export class StoreService {
     constructor(
         private readonly storeRepository: StoreRepository,
         private readonly couponService: CouponService,
+        private readonly userService: UserService,
         private readonly authService: AuthService,
         private readonly redis: RedisService,
         private readonly socket: SocketGateWay,
@@ -48,8 +50,6 @@ export class StoreService {
     })
     : Promise<void> {
         const order: OrderDto = await PortOneMethod.findOrder(imp_uid)
-        let { type } = JSON.parse(order.custom_data)
-
         const userUUIDs = { order_uid, imp_uid }
         const portOneUUIDs = { order_uid: order.merchant_uid, imp_uid: order.imp_uid }
         if(!this._equalUUIds(portOneUUIDs, userUUIDs)) {
@@ -58,7 +58,8 @@ export class StoreService {
             err.substatus = "ForgeryData"
             throw err
         }
-
+        
+        let { type } = JSON.parse(order.custom_data)
         switch(type) {
             case "order":
                 await this.sendOrder({
@@ -89,29 +90,30 @@ export class StoreService {
                 result: false,
             }
         }
-        const useResult = await this.couponService.useCoupon(
+        const useResult = await this.couponService.checkValidateAndUpdateCoupon(
             user_email,
             code,
         )
-        if(typeof useResult.result === "boolean") {
+        if(typeof useResult === "boolean") {
             return {
-                message: useResult.message,
-                result: useResult.result,
+                message: "유효하지 않은 쿠폰사용으로 주문이 취소되었습니다",
+                result: useResult,
             }
         } else {
-            const randUUID = this.authService.getRandUUID()
-            const order: RegisteredOrder = {
+            const uuid = this.authService.getRandUUID()
+            const sales_uid = this.authService.getRandUUID()
+            const order = {
                 deliveryinfo: [deliveryinfo],
-                imp_uid: randUUID.substring(0, 12),
-                menus: [useResult.result.menuinfo],
+                imp_uid: uuid.substring(0, 12),
+                menus: [useResult.menuinfo],
                 saleprice: 0,
                 store_uid: storeId,
-                sales_uid: this.authService.getRandUUID(),
-                totalprice: useResult.result.menuinfo.price,
-                uuid: randUUID,
+                sales_uid,
+                totalprice: "쿠폰결제",
+                uuid,
                 buyer_email: user_email,
                 state: "wait",
-            }
+            } satisfies RegisteredOrder
             await this.redis.set(order.uuid, order, StoreService.name)
             .catch(err => {
                 this._refuseOrder(order.uuid)
@@ -121,7 +123,6 @@ export class StoreService {
             })
             const result = this.socket.sendOrder(socketId, order)
             if(result) this.socket.pushStateMessage(user_email, "wait")
-            else this.socket.pushStateMessage(user_email, "refuse")
             return { result }
         }
     }
@@ -195,10 +196,11 @@ export class StoreService {
                 throw err
             } else if(!store.socketId) {
                 this._refuseOrder(order_uid)
-                throw ERROR.NotFound
+                throw ERROR.Forbidden
             }
 
-            const { menus, deliveryinfo } = orderInfo
+            const { menus, deliveryinfo, point } = orderInfo
+            const sales_uid = this.authService.getRandUUID()
             const orderEntity = {
                 uuid: order_uid,
                 imp_uid: order.imp_uid,
@@ -207,12 +209,19 @@ export class StoreService {
                 store_uid: store.storeId,
                 deliveryinfo,
                 menus,
+                sales_uid,
                 state: "wait",
-                buyer_email: order.buyer_email,
-            } as RegisteredOrder
+                buyer_email: order.buyer_email!,
+            } satisfies RegisteredOrder
 
             await this.redis.set(orderEntity.uuid, orderEntity, StoreService.name)
-            .catch( err => {
+            .then(async () => {
+                if(point !== undefined) {
+                    await this.userService
+                    .decreaseUserPoint(order.buyer_email!, point)
+                }
+            })
+            .catch(err => {
                 this._refuseOrder(order_uid)
                 Logger.error("주문정보 캐싱 실패", StoreService.name)
                 this.socket.pushStateMessage(order.buyer_email!, "refuse")
@@ -221,7 +230,11 @@ export class StoreService {
             result = this.socket.sendOrder(store.socketId, orderEntity)
         }
         if(result) this.socket.pushStateMessage(order.buyer_email!, "wait")
-        else this.socket.pushStateMessage(order.buyer_email!, "refuse")
+        else {
+            this._refuseOrder(order_uid)
+            this.socket.pushStateMessage(order.buyer_email!, "refuse")
+            Logger.error("주문정보 전달 실패", StoreService.name)
+        }
         return result
     }
 

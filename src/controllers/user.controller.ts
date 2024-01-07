@@ -7,14 +7,11 @@ import { UserService } from "../services/user.service";
 import { AuthGuard } from "src/common/guards/auth.guard";
 import { AuthDecorator } from "src/common/decorators/auth.decorator";
 import { UserDto } from "src/dto/user.dto";
-import { CouponService } from "src/services/coupon.service";
-
 @Controller('user')
 @ApiTags("유저")
 export class UserController {
     constructor(
         private readonly userService: UserService,
-        private readonly couponService: CouponService,
     ){}
     
     @TypedRoute.Post("regist/publish")
@@ -92,7 +89,9 @@ export class UserController {
     @TypedRoute.Post("login/token")
     @UseGuards(AuthGuard)
     async tokenLogin(
-        @AuthDecorator.GetTokenAndPayload() data: { payload: any, token:string }
+        @AuthDecorator.GetTokenAndPayload() data: 
+        | { payload: any, token: string }
+        | { payload: any }
     ) : Promise<TryCatch<
     UserDto,
     | typeof ERROR.ServerDatabaseError
@@ -102,8 +101,12 @@ export class UserController {
         try {
             if("email" in data.payload 
             && "authorized" in data.payload) {
+                const authorized = data.payload.authorized as boolean
                 let result : UserDto
-                if("token" in data.payload) result = await this.userService.checkRefresh(data.payload.email, data.payload.token)
+                if(!authorized) {
+                    const needCheckData = { ...data } as { payload: any, token: string }
+                    result = await this.userService.checkRefresh(needCheckData.payload.email)
+                }
                 else result = await this.userService.loginByEmail(data.payload.email)
                 return {
                     data: result,
@@ -112,33 +115,4 @@ export class UserController {
             } else return data.payload
         } catch(e) { return e }
     }
-
-    @TypedRoute.Post("coupon")
-    async useCoupon(
-
-    ): Promise<TryCatch<
-    boolean,
-    | typeof ERROR.ServerDatabaseError
-    | typeof ERROR.NotFoundData
-    | typeof ERROR.UnAuthorized
-    >> {
-        try {
-            return {
-                data: true,
-                status: 201,
-            }
-        } catch(e) { return e }
-    }
-
-    // @TypedRoute.Delete()
-    // async deleteUser(
-    //     @TypedQuery() query: { email: string },
-    // ) {
-    //     try {
-    //         return await this.userService.deleteUser(query.email)
-    //     } catch(e) {
-    //         console.log(e)
-    //         return e
-    //     }
-    // }
 }

@@ -59,6 +59,7 @@ export class MenuRepository implements IRepository<MenuEntity, MenuDetailEntity>
             id: e.id,
             category: e.category,
             name: e.name,
+            price: e.price,
             en_name: e.en_name,
             thumbnail: e.thumbnail,
             detailId: e.detail.id,
@@ -70,7 +71,6 @@ export class MenuRepository implements IRepository<MenuEntity, MenuDetailEntity>
         return {
             id: e.id,
             description: e.description,
-            price: e.price,
             allergys: e.allergys,
             nutritions: e.nutritions.map(n => ({ 
                 size: n.size as BottleSize,

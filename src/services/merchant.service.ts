@@ -4,6 +4,7 @@ import { AuthService } from "./auth.service";
 import { MerchantDto } from "src/dto/merchant.dto";
 import { StoreCache } from "src/common/type/socket.type";
 import { RedisService } from "./redis.service";
+import { StoreEntity } from "src/repositories/store/store.entity";
 
 @Injectable()
 export class MerchantService {
@@ -29,20 +30,22 @@ export class MerchantService {
             store: this.auth.getRandUUID(), 
             wallet: this.auth.getRandUUID(),
         }
-        await this.merchantRepository.create({
+        const merchant = await this.merchantRepository.create({
             createData,
             uuids,
             pass: hash,
             salt,
-        }).then(async merchant => {
-            const store = merchant.store
-            const caches = await this.redis.get<StoreCache[]>("stores", MerchantService.name) ?? []
-            await this.redis.set(
-                "stores", [...caches, 
-                {...store, storeId: store.uuid, isOpen: false} as StoreCache], 
-                MerchantService.name
-            )
         })
+        this._upsertCache(merchant.store)
         return uuids
+    }
+
+    private async _upsertCache(store: StoreEntity) {
+        const caches = await this.redis.get<StoreCache[]>("stores", MerchantService.name) ?? []
+        this.redis.set(
+            "stores", [...caches, 
+            {...store, storeId: store.uuid, isOpen: false} as StoreCache], 
+            MerchantService.name
+        )
     }
 }

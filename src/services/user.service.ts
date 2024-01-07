@@ -55,7 +55,7 @@ export class UserService {
             throw ERROR.FailedSendMail
         }))
         .catch(async err => {
-            await this.redis.delete(code, UserService.name)
+            this.redis.delete(code, UserService.name)
             throw err
         })
         
@@ -76,15 +76,13 @@ export class UserService {
             throw error
         }
 
-        await this.redis.delete(code, UserService.name)
-        .then(async _=> {
-            await this.redis.set(
-                data.email, 
-                data, 
-                UserService.name,
-                600,
-            )
-        })
+        this.redis.delete(code, UserService.name)
+        this.redis.set(
+            data.email, 
+            data, 
+            UserService.name,
+            600,
+        )
         return true
     }
     
@@ -100,8 +98,8 @@ export class UserService {
             uuid: this.auth.getRandUUID(), 
             wallet_uid: this.auth.getRandUUID(), 
         })
-        await this._upsertCache(createdUser)
-        .then(async _=> await this.redis.delete(email, UserService.name))
+        this._upsertCache(createdUser)
+        this.redis.delete(email, UserService.name)
         
         return true
     }
@@ -127,7 +125,8 @@ export class UserService {
                 accesstoken: accesstoken,
                 refreshtoken: refreshtoken,
             }, findUser.email)
-            await this._upsertCache(findUser)
+            this._upsertCache(findUser)
+
             return { 
                 tel: findUser.tel,
                 email: findUser.email,
@@ -162,9 +161,9 @@ export class UserService {
      * @param token 
      * @returns User
      */
-    async checkRefresh(email: string, token: string) : 
+    async checkRefresh(email: string) : 
     Promise<UserDto> {
-        const findUser = await this._findUserWithToken({ email, token })
+        const findUser = await this._findUser(email)
         if(!findUser.refreshtoken) {
             var error = ERROR.UnAuthorized
             error.substatus = "ExpiredToken"
@@ -177,7 +176,10 @@ export class UserService {
                 throw err
             })
 
-            if(payload !== null) {
+            if(payload !== null 
+                && "email" in payload 
+                && payload.email === email
+            ) {
                 // accesstoken과 refreshtoken 갱신
                 const { accesstoken, refreshtoken } = await this._publishTokens(findUser.email)
                 const user = await this.userRepository.updateBy({
@@ -185,7 +187,7 @@ export class UserService {
                     refreshtoken: refreshtoken,
                 }, findUser.email)
 
-                await this._upsertCache(user)
+                this._upsertCache(user)
                 return { ...user } as UserDto
             }
 
@@ -194,7 +196,7 @@ export class UserService {
                 accesstoken: null,
                 refreshtoken: null,
             }, findUser.email)
-            await this._upsertCache(user)
+            this._upsertCache(user)
             // 디비에 저장되어 있는 RefreshToken이 오염될 경우에만
             // 에러를 스로잉 함
             var error = ERROR.UnAuthorized
@@ -210,6 +212,24 @@ export class UserService {
 
     async deleteUser(email: string) {
         await this.userRepository.deleteBy(email)
+    }
+
+    async addOrderHistory(buyer_email: string, history: OrderHistory)
+    : Promise<void> {
+        const user = await this.userRepository.addOrderHistory(
+            buyer_email,
+            history,
+        )
+        this._upsertCache(user)
+    }
+
+    async decreaseUserPoint(buyer_email: string, use_point?: number)
+    : Promise<void> {
+        const user = await this.userRepository.decreaseUserPoint(
+            buyer_email,
+            use_point ?? 0,
+        )
+        this._upsertCache(user)
     }
 
     /**
@@ -258,29 +278,6 @@ export class UserService {
             if(!found) caches.push(cache)
             await this.redis.set("users", caches, UserService.name)
         }
-    }
-
-    /**
-     * 유저정보조회
-     * 
-     * AccessToken이 만료된 경우 사용
-     * @param email 
-     * @param token
-     * @returns User
-     */
-    private async _findUserWithToken(args : Partial<{ email: string, token: string }>) :
-    Promise<UserEntity> {
-        const user : UserEntity = await this._findUser(args.email)
-
-        var error
-        if(user.accesstoken === args.token) return user
-        else if(user.accesstoken === null) error = ERROR.NotFoundData
-        else {
-            error = ERROR.UnAuthorized
-            error.substatus = "ForgeryData"
-        }
-
-        throw error
     }
 
     /**

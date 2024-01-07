@@ -6,7 +6,8 @@ import * as dotenv from "dotenv"
 import { StoreRepository } from "src/repositories/store/store.repository"
 import { RegisteredOrder } from "../type/order.type"
 import { StoreCache } from "../type/socket.type"
-import { UserEntity } from "src/repositories/user/user.entity"
+import { OrderHistory, UserEntity } from "src/repositories/user/user.entity"
+import { UserService } from "src/services/user.service"
 
 dotenv.config()
 const impKey = process.env.IMP_KEY
@@ -44,27 +45,26 @@ export namespace PortOneMethod {
             order_uid,
             redis,
         })
-        await repository.createOrder(order, order.sales_uid)
+        await repository.createOrder(order)
         return order.buyer_email
     }
 
     export const finishOrder = async ({
         order_uid,
         redis,
+        service,
         repository,
     }: {
         order_uid: string,
         redis: RedisService,
+        service: UserService,
         repository: StoreRepository,
-    }) : Promise<string> => { 
-        const order = await findOrderByUUID({
-            order_uid,
-            redis,
-        }).then(async res => {
-            await removeOrderById({order_uid, redis})
-            return res
-        }) 
-
+    }) : Promise<{ 
+        buyer_email: string, 
+        totalprice: number | string
+        history: OrderHistory
+    }> => { 
+        const order = await removeOrderById({order_uid, redis, repository})
         const store : StoreCache | null | undefined = await redis.get<StoreCache[]>(
             "stores",
             logPath,
@@ -73,14 +73,8 @@ export namespace PortOneMethod {
             return res.find(s => s.storeId === order.store_uid)
         })
         if(store === null || store === undefined) throw ERROR.Accepted
-        
-        const user : UserEntity | null | undefined = await redis.get<UserEntity[]>("users", logPath)
-        .then(res => {
-            if(res === null) return null
-            return res.find(u => u.email === order.buyer_email)
-        })
-        if(user === null || user === undefined) throw ERROR.Accepted
-        await repository.addOrderHistory(order.buyer_email, {
+
+        const history = {
             imp_uid: order.imp_uid,
             menus: order.menus,
             saleprice: order.saleprice,
@@ -90,23 +84,27 @@ export namespace PortOneMethod {
             totalprice: order.totalprice,
             deliveryinfo: order.deliveryinfo,
             order_date: new Date(Date.now()),
-        })
+        } satisfies OrderHistory
+        await service.addOrderHistory(order.buyer_email, history)
         
-        return order.buyer_email
+        return { buyer_email: order.buyer_email, totalprice: order.totalprice, history }
     }
 
     export const removeOrderById = async ({
         redis,
         order_uid,
+        repository,
     } : {
         redis: RedisService,
         order_uid: string,
+        repository: StoreRepository,
     }) : Promise<RegisteredOrder> => {
         const order = await findOrderByUUID({
             order_uid,
             redis,
         })
-        await redis.delete(order_uid, logPath)
+        await repository.deleteOrder(order_uid, order.sales_uid)
+        redis.delete(order_uid, logPath)
         return order
     }
 

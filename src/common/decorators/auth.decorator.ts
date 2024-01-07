@@ -11,7 +11,7 @@ export namespace AuthDecorator {
         const { user: payload, headers } = context.switchToHttp().getRequest()
         const token : string | undefined = headers.authorization?.split(" ")[1]
         return (payload.authorized === undefined || !payload.authorized) 
-        ? { payload } : { payload, token }
+        ? { payload, token } : { payload }
     })
     export const IsValidCoupon = createParamDecorator((data, context: ExecutionContext)
     : boolean | FailedResponse => {

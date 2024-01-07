@@ -11,6 +11,7 @@ import { SocketModule } from "./socket.module";
 import { JwtModule } from "./jwt.module";
 import { AuthModule } from "./auth.module";
 import { CouponModule } from "./coupon.module";
+import { UserModule } from "./user.module";
 
 @Module({
     imports: [
@@ -18,6 +19,7 @@ import { CouponModule } from "./coupon.module";
         JwtModule,
         AuthModule,
         CouponModule,
+        UserModule,
     ],
     controllers: [
         StoreController,

@@ -1,6 +1,6 @@
 import { CanActivate, ExecutionContext, HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
 import { Request } from 'express';
-import { ERROR, FailedResponse } from "../type/response.type";
+import { ERROR } from "../type/response.type";
 import { AuthService } from "src/services/auth.service";
 import { IPayload } from "../interface/ipayload";
 
@@ -31,7 +31,6 @@ export class AuthGuard implements CanActivate {
             return true
         } catch(e) {
             if(typeof e === typeof ERROR) {
-                const err: typeof ERROR = ({...e} satisfies typeof ERROR)
                 Logger.error(`[검증 할 수 없는 토큰] 요청 아이피: ${reqAddress}\n위조데이터 가능성 있음`, AuthGuard.name)
             }
             throw new HttpException(e, HttpStatus.FORBIDDEN)

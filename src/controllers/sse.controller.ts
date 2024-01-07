@@ -25,7 +25,7 @@ export class SSEController {
         try {
             if("email" in data.payload 
             && "authorized" in data.payload
-            && (data.payload.authorized satisfies boolean)) {
+            && (data.payload.authorized as boolean)) {
                 request.on('close', () => this.sseService.disconnectSSE(query.listener_email))
                 return this.sseService.listenSSE(query.listener_email)
             } else throw ERROR.UnAuthorized

@@ -5,9 +5,8 @@ import { LatLng, StoreEntity } from "./store.entity";
 import { ERROR } from "../../common/type/response.type";
 import { StoreDetailEntity, WeeklyHours } from "./storedetail.entity";
 import { OrderEntity } from "../user/order.entity";
-import { MenuInfo } from "src/common/type/order.type";
+import { MenuInfo, RegisteredOrder } from "src/common/type/order.type";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
-import { OrderHistory } from "../user/user.entity";
 
 @Injectable()
 export class StoreRepository implements IRepository<StoreEntity, StoreDetailEntity>  {
@@ -29,21 +28,6 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
         })).map(o => this.parsingOrderEntity(o))
     }
 
-    async addOrderHistory(buyer_email: string, history: OrderHistory)
-    : Promise<boolean> {
-        return !!(await PrismaService.prisma.user.update({
-            where: { email: buyer_email },
-            data: {
-                orderhistory: {
-                    push: { ...history }
-                }
-            }
-        }).catch(err => {
-            Logger.error("주문내역 업데이트에 실패했습니다.")
-            throw ERROR.ServerDatabaseError
-        }))
-    }
-
     async getMany(): Promise<StoreEntity[]> {
         return (await PrismaService.prisma.store.findMany({ 
             include: { detail: { select: { id: true }} }
@@ -53,11 +37,19 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
         })).map(e => this.parsingEntity(e))
     }
 
-    async createOrder(order: OrderEntity, sales_uid: string)
+    async createOrder(order: RegisteredOrder)
     : Promise<OrderEntity> {
         return await PrismaService.prisma.$transaction<OrderEntity>(async tx => {
             const createdOrder = this.parsingOrderEntity(await tx.order.create({
-                data: { ...order}
+                data: { 
+                    deliveryinfo: order.deliveryinfo,
+                    imp_uid: order.imp_uid,
+                    menus: order.menus,
+                    saleprice: order.saleprice,
+                    store_uid: order.store_uid,
+                    totalprice: typeof order.totalprice === "string" ? 0 : order.totalprice,
+                    uuid: order.uuid,
+                }
             }).catch(err => {
                 Logger.error("데이터를 갱신하는데 실패했습니다.", err.toString(), StoreRepository)
                 throw ERROR.ServerDatabaseError
@@ -68,11 +60,11 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                     wallet: {
                         update: {
                             data: {
-                                point: { increment: createdOrder.totalprice },
+                                point: { increment: typeof createdOrder.totalprice === "string" ? 0 : createdOrder.totalprice, },
                                 sales: {
                                     create: {
-                                        uuid: sales_uid,
-                                        amounts: order.totalprice,
+                                        uuid: order.sales_uid,
+                                        amounts: typeof order.totalprice === "string" ? 0 : order.totalprice,
                                         menus: order.menus,
                                     }
                                 },
@@ -131,7 +123,7 @@ export class StoreRepository implements IRepository<StoreEntity, StoreDetailEnti
                     wallet: {
                         update: {
                             data: {
-                                point: { decrement: deletedOrder.totalprice },
+                                point: { decrement: typeof deletedOrder.totalprice === "string" ? 0 : deletedOrder.totalprice },
                                 sales: {
                                     delete: { uuid: sales_uid }
                                 },
