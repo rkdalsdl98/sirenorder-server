@@ -22,7 +22,7 @@ export class CouponRepository implements IRepository<CouponEntity, unknown> {
         })
         .then(_=> Logger.log("쿠폰정보 초기화"))
         .catch(err => {
-            Logger.error("쿠폰정보 초기화중 오류가 발생했습니다.", CouponRepository.name)
+            Logger.error(`쿠폰정보 초기화중 오류가 발생했습니다.\n${err}`, CouponRepository.name)
             throw ERROR.ServerDatabaseError
         })
     }

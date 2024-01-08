@@ -1,0 +1,38 @@
+version: "3"
+services:
+  # redis:
+  #   image: redis:7.2-alpine
+  #   restart: always
+  #   ports:
+  #     - 6379:6379
+  #   networks:
+  #     - servernet
+  db:
+    container_name: postgres
+    build: ./prisma
+    restart: always
+    ports:
+      - 5432:5432
+    networks:
+      - servernet
+  server:
+    container_name: sirenorder-server
+    build: ./
+    ports:
+      - 80:80
+      - 81:81
+    entrypoint: ["sh", "-c"]
+    # DB 컨테이너가 완전히 로드되기 이전에 명령어가 실행되면
+    # DB 동기화와 시드데이터를 넣을 수 없으므로 일정 시간 멈춤
+    command: 
+      - |
+        sleep 5
+        service redis-server start
+        npx prisma db push
+        npx prisma db seed
+        tail -f /dev/null
+    networks:
+      - servernet
+networks:
+  servernet:
+    external: true

@@ -287,6 +287,7 @@ export class StoreService {
         await PortOneMethod.removeOrderById({
             redis: this.redis,
             order_uid: uuid,
+            repository: this.storeRepository
         })
         .catch(err => {
             Logger.error("주문삭제 실패", StoreService.name)
