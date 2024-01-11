@@ -36,6 +36,3 @@ lerna-debug.log*
 *.config.ts
 .env
 swagger.json
-
-# Docker
-Dockerfile
