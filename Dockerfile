@@ -7,8 +7,8 @@ RUN apt-get update; \
 
 # 깃 설정 값
 
-RUN git config --global user.name KangMins
-RUN git config --global user.email rkdalsdl98@naver.com
+RUN git config --global user.name git-user-name
+RUN git config --global user.email git-user-email
 
 # 언어 추가
 RUN localedef -i ko_KR -f UTF-8 ko_KR.UTF-8
