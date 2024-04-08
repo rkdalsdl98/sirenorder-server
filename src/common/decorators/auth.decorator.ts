@@ -14,12 +14,8 @@ export namespace AuthDecorator {
         ? { payload, token } : { payload }
     })
     export const IsValidCoupon = createParamDecorator((data, context: ExecutionContext)
-    : boolean | FailedResponse => {
+    : boolean => {
         const { user: result } = context.switchToHttp().getRequest()
-        if(typeof result === "boolean") {
-            return result
-        }
-
-        return result as FailedResponse
+        return result
     })
 }

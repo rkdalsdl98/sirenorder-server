@@ -8,13 +8,15 @@ export class SSEService {
     private sub = new Subject<SSESubject>()
     private obs = this.sub.asObservable()
     private notifiers: Notifier[] = []
-
+    
     listenSSE(
         listener_email: string,
     ) : Observable<MessageEvent<SSESubject>> {
         if(!!(this.notifiers.find(user => user.receiver_email === listener_email))) {
             throw ERROR.Conflict
         }
+        // notifier를 클래스로 작성하면
+        // 인라인 캐시 때문에 속도가 빨라질듯?
         this.notifiers.push({
             receiver_email: listener_email,
             subject: this.sub,

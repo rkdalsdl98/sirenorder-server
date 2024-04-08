@@ -7,8 +7,8 @@ RUN apt-get update; \
 
 # 깃 설정 값
 
-RUN git config --global user.name git-user-name
-RUN git config --global user.email git-user-email
+RUN git config --global user.name 
+RUN git config --global user.email 
 
 # 언어 추가
 RUN localedef -i ko_KR -f UTF-8 ko_KR.UTF-8
@@ -21,7 +21,7 @@ ENV LANG en_US.utf8
 
 # 서버 환경 변수
 
-ENV DATABASE_URL="postgresql://{username}:{password}@{ip or service}:5432/postgres"
+ENV DATABASE_URL="postgresql://postgres:rkdalsdl112@localhost:5432/sirenorder?schema=public"
 
 ENV SERVER_IP=127.0.0.1
 ENV SERVER_IP_DEV=127.0.0.1
@@ -35,25 +35,25 @@ ENV REDIS_TTL=60
 ENV EMAIL_HOST=smtp.gmail.com
 ENV EMAIL_FROM_USER_NAME=SirenOrder
 ENV EMAIL_TTL=180
-ENV AUTH_PASSWORD=auth-pass
-ENV AUTH_EMAIL=auth-email
+ENV AUTH_EMAIL=email_auth
+ENV AUTH_PASSWORD=email_auth_pass
 
 ENV AUTH_ITERATION=iteration
-ENV AUTH_KEY_LEN=len
-ENV AUTH_ALGORITHM=algorithm
+ENV AUTH_KEY_LEN=key_len
+ENV AUTH_ALGORITHM=encrypt_algorithm
 ENV AUTH_ENCODING=encoding
-ENV AUTH_BUFFER_ENCODING=buffer-encoding
+ENV AUTH_BUFFER_ENCODING=buffer_encoding
 
 ENV JWT_EXPIRATION=60
-ENV JWT_SECRET=jwt-secret
+ENV JWT_SECRET=2cfb2d1
 
-ENV IMP_KEY=imp-key
-ENV IMP_SECRET=imp-secret
+ENV IMP_KEY=imp_key
+ENV IMP_SECRET=imp_secret
 
 
-ENV COUPON_SECRET=coupon-secret
+ENV COUPON_SECRET=coupon_secret
 
-ENV SERVER_SECRET=server-secret
+ENV SERVER_SECRET=server_secret
 
 COPY . .
 

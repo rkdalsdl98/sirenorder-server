@@ -25,7 +25,6 @@ export class StoreService {
         private readonly redis: RedisService,
         private readonly socket: SocketGateWay,
     ){ this._initialized() }
-
     private async _initialized() :
     Promise<void> {
         await this.storeRepository.deleteOrders()
@@ -83,8 +82,8 @@ export class StoreService {
         code: string,
         deliveryinfo: DeliveryInfo,
     ) : Promise<{ message?: string, result: boolean }> {
-        const socketId = await this._isOpenStore(storeId)
-        if(!socketId || socketId === undefined) {
+        const store = await this._getStore(storeId)
+        if(store === undefined) {
             return {
                 message: "영업중인 매장이 아닙니다.",
                 result: false,
@@ -121,8 +120,13 @@ export class StoreService {
                 this.socket.pushStateMessage(user_email, "refuse")
                 throw err
             })
-            const result = this.socket.sendOrder(socketId, order)
+            const result = this.socket.sendOrder(store.socketId!, order)
             if(result) this.socket.pushStateMessage(user_email, "wait")
+            else {
+                this._refuseOrder(order.uuid)
+                this.socket.pushStateMessage(order.buyer_email!, "refuse")
+                Logger.error("주문정보 전달 실패", StoreService.name)
+            }
             return { result }
         }
     }
@@ -185,10 +189,9 @@ export class StoreService {
 
         let { data } = JSON.parse(order.custom_data)
         let { storeId, orderInfo } : { storeId: string, orderInfo: OrderInfo } = JSON.parse(data)
-        const store = (await this.redis.get<StoreCache[]>("stores", StoreService.name))
-        ?.find(s => s.storeId === storeId)
+        const store = await this._getStore(storeId)
 
-        if(store && store.isOpen && store.socketId) {
+        if(store) {
             if(!orderInfo) {
                 this._refuseOrder(order_uid)
                 var err = ERROR.BadRequest
@@ -262,12 +265,6 @@ export class StoreService {
         return await this._getStores()
     }
 
-    private async _isOpenStore(storeId: string)
-    : Promise<string | undefined | null> {
-        return (await this.redis.get<StoreCache[]>("stores", CouponService.name))
-        ?.find(store => store.storeId === storeId)?.socketId
-    }
-
     private _equalUUIds(
         portOne: {imp_uid: string, order_uid: string},
         user: {imp_uid: string, order_uid: string},
@@ -293,6 +290,13 @@ export class StoreService {
             Logger.error("주문삭제 실패", StoreService.name)
             throw err
         })
+    }
+
+    private async _getStore(storeId: string)
+    : Promise<StoreCache | undefined> {
+        const store = (await this.redis.get<StoreCache[]>("stores", CouponService.name))
+        ?.find(store => store.storeId === storeId)
+        return (store !== undefined && store.socketId !== undefined && store.isOpen) ? store : undefined
     }
 
     /**

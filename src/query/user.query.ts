@@ -5,8 +5,8 @@ export namespace UserQuery {
         readonly email: string & tags.Format<"email">
         readonly pass: 
         string 
-        & tags.Pattern<"[0-9a-zA-Z]{6,20}">
-        & tags.Pattern<"[\!\`\~\@\#\$\%\^\&\*\_\+\=\/\>\<\?]{1,}">
+        // & tags.Pattern<"[0-9a-zA-Z]{6,20}">
+        // & tags.Pattern<"[\!\`\~\@\#\$\%\^\&\*\_\+\=\/\>\<\?]{1,}">
     }
     
     export interface UserQueryRegistOptions extends UserQueryLoginOptions {

@@ -77,7 +77,7 @@ export class CouponController {
     @TypedRoute.Post("publish")
     @UseGuards(CouponGuard)
     async publishCoupon(
-        @AuthDecorator.IsValidCoupon() data: boolean | FailedResponse,
+        @AuthDecorator.IsValidCoupon() data: boolean,
         @TypedBody() body: CouponBody.CouponBodyPublishBody,
     ) 
     : Promise<TryCatch<
@@ -88,22 +88,20 @@ export class CouponController {
     | typeof ERROR.ServiceUnavailableException
     >> {
         try {
-            if(typeof data === "boolean") {
-                if(!data) return {
-                    data: null,
-                    status: 202
-                }
-                
-                const result = await this.couponService.publishCoupon({
-                    menuinfo: body.menuinfo,
-                    expiration_day: body.expiration_day,
-                })
-                
-                return {
-                    data: result,
-                    status: 201,
-                }
-            } else throw data
+            if(!data) return {
+                data: null,
+                status: 202
+            }
+            
+            const { code } = await this.couponService.publishCoupon({
+                menuinfo: body.menuinfo,
+                expiration_day: body.expiration_day,
+            })
+            
+            return {
+                data: code,
+                status: 201,
+            }
         } catch(e) { return e }
     }
 
@@ -119,22 +117,20 @@ export class CouponController {
     | typeof ERROR.ServiceUnavailableException
     >> {
         try {
-            if(typeof data === "boolean") {
-                if(!data) return {
-                    data,
-                    status: 202
-                }
-                const result = await this.couponService.deleteCoupon({
-                    user_email: query.user_email,
-                    code: query.code,
-                    message: query.message,
-                })
+            if(!data) return {
+                data,
+                status: 202
+            }
+            const result = await this.couponService.deleteCoupon({
+                user_email: query.user_email,
+                code: query.code,
+                message: query.message,
+            })
 
-                return {
-                    data: result,
-                    status: 201,
-                }
-            } else throw data
+            return {
+                data: result,
+                status: 201,
+            }
         } catch(e) { return e }
     }
 }

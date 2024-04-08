@@ -27,7 +27,7 @@ export class MenuRepository implements IRepository<MenuEntity, MenuDetailEntity>
     }): Promise<MenuDetailEntity> {
         return this.parsingMenuDetailEntity(await PrismaService.prisma.menudetail.findUnique({
             where: { id: args.id },
-            include: { nutritions: true }
+            include: { nutritions: true },
         }).catch(err => {
             Logger.error("데이터를 불러오는데 실패했습니다.", err.toString(), MenuRepository)
             throw ERROR.ServerDatabaseError
@@ -37,7 +37,7 @@ export class MenuRepository implements IRepository<MenuEntity, MenuDetailEntity>
     async getMany(category?: Category): Promise<MenuEntity[]> {
         return (await PrismaService.prisma.menu.findMany({
             where: { category },
-            include: { detail: { select: { id: true }} 
+            include: { detail: { select: { id: true }},
         }})
         .catch(err => {
             Logger.error("데이터를 불러오는데 실패했습니다.", err.toString(), MenuRepository)

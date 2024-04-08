@@ -11,6 +11,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+generator markdown {
+  provider = "prisma-markdown"
+  title    = "Bullet-in"
+  output   = "../docs/ERD.md"
+}
+
 model user {
   uuid String @id
   email String @unique

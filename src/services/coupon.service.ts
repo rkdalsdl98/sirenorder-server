@@ -34,7 +34,7 @@ export class CouponService {
     // => 결과 반환
     
     async publishCoupon(coupon_info: CouponInfo) 
-    : Promise<string> {
+    : Promise<{ code: string, expiration_period: Date }> {
         const code = this.auth.generateRandStr(12)
         const { hash } = this.auth.encryption(code, coupon_secret, 32)
         const expiration_period = this._createExpirationPeriod(coupon_info.expiration_day)
@@ -46,7 +46,7 @@ export class CouponService {
             },
         })
         if(!published) throw ERROR.ServiceUnavailableException
-        return code
+        return { code, expiration_period }
     }
 
     /**
@@ -55,7 +55,7 @@ export class CouponService {
      */
     async publishAndRegisterStampCoupon(current_user_email: string)
     : Promise<SimpleCouponEntity> {
-        const code = await this.publishCoupon({
+        const { code } = await this.publishCoupon({
             menuinfo: {
                 "name": "아메리카노",
                 "en_name": "Americano",
@@ -85,6 +85,8 @@ export class CouponService {
             menu_name: data.coupon.menuinfo.name,
             thumbnail: data.coupon.menuinfo.thumbnail,
         } as SimpleCouponEntity
+        let message = "쿠폰을 지급 받으셨습니다\n쿠폰함을 확인 해주세요!"
+        let title
         try {
             const registered = await this.couponRepoistory.registerCoupon({
                 current_user_email,
@@ -93,20 +95,13 @@ export class CouponService {
             })
             if(!registered) {
                 if(isStamp !== undefined && isStamp) {
-                    await this.deleteCoupon({
-                        user_email: current_user_email,
-                        code,
-                        message: "스탬프의 개수가 모자라 쿠폰발행이 취소됩니다",
-                        title: "스탬프 개수 부족",
-                    })
-                    throw ERROR.Accepted
+                    title = "스탬프 개수 부족"
+                    message = "스탬프의 개수가 모자라 쿠폰발행이 취소됩니다"
                 }
                 throw ERROR.Accepted
             }
-
-            let message = "쿠폰을 지급 받으셨습니다\n쿠폰함을 확인 해주세요!"
             if(isStamp !== undefined && isStamp) {
-                message += "스탬프를 사용해"
+                message = "스탬프를 사용해" + message
             }
             this.sseService.pushMessage({
                 notify_type: "user-notify",
@@ -124,29 +119,27 @@ export class CouponService {
             )
             return simple_data
         } catch(e) {
-            if(typeof ERROR.Accepted !== typeof e) {
-                await this.deleteCoupon({
-                    user_email: current_user_email,
-                    code,
-                    message: "쿠폰등록에 실패했습니다"
-                })
-            }
+            await this.deleteCoupon({
+                user_email: current_user_email,
+                code,
+                message: "쿠폰등록에 실패했습니다",
+                title,
+            })
             throw e
         }
     }
 
     
     async sendGift(giftInfo: GiftInfo) : Promise<GiftEntity> {
-        const code = await this.publishCoupon({
+        const { code, expiration_period } = await this.publishCoupon({
             menuinfo: giftInfo.menu,
             expiration_day: 1,
         })
-        const data = await this._validate(code)
         const coupon = {
             code,
-            expiration_period: data.coupon.expiration_period,
-            menu_name: data.coupon.menuinfo.name,
-            thumbnail: data.coupon.menuinfo.thumbnail,
+            expiration_period,
+            menu_name: giftInfo.menu.name,
+            thumbnail: giftInfo.menu.thumbnail,
         } as SimpleCouponEntity
         const gift_uid = this.auth.getRandUUID()
         await this.couponRepoistory.updateGift({
@@ -157,7 +150,11 @@ export class CouponService {
         this._updateCouponFromUser(
             giftInfo.to,
             code,
-            data.coupon,
+            {
+                code,
+                expiration_period,
+                menuinfo: giftInfo.menu,
+            } satisfies CouponEntity,
         )
         return {
             coupon,
@@ -167,7 +164,7 @@ export class CouponService {
             uuid: gift_uid,
             wrappingtype: giftInfo.wrappingtype,
             used: false,
-        }
+        } satisfies GiftEntity
     }
 
     async useGiftCoupon(

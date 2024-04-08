@@ -47,6 +47,13 @@ export class MerchantRepository implements IRepository<MerchantEntity, undefined
             }
         })
         .catch(err => {
+            if(err instanceof PrismaClientKnownRequestError) {
+                switch(err.code) {
+                    case "P2025":
+                        Logger.error("데이터를 불러오는데 실패했습니다.", err.toString(), MerchantRepository.name)
+                        throw ERROR.NotFoundData
+                }
+            }
             Logger.error("데이터를 불러오는데 실패했습니다.", err.toString(), MerchantRepository.name)
             throw ERROR.ServerDatabaseError
         }))

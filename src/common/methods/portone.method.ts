@@ -6,7 +6,7 @@ import * as dotenv from "dotenv"
 import { StoreRepository } from "src/repositories/store/store.repository"
 import { RegisteredOrder } from "../type/order.type"
 import { StoreCache } from "../type/socket.type"
-import { OrderHistory, UserEntity } from "src/repositories/user/user.entity"
+import { OrderHistory } from "src/repositories/user/user.entity"
 import { UserService } from "src/services/user.service"
 
 dotenv.config()

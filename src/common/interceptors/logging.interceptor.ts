@@ -8,6 +8,7 @@ import {
 import { Observable, of } from "rxjs";
 import { catchError, tap } from 'rxjs/operators';
 import { ERROR } from "../type/response.type";
+import { FileSystem } from "../filesystem";
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
@@ -24,7 +25,7 @@ export class LoggingInterceptor implements NestInterceptor {
         return next
         .handle()
         .pipe(
-            tap(_=> console.log(`[요청 처리 성공] ${ Date.now() - before}/ms`)),
+            tap(_=> FileSystem.append("logs", "api_log.txt", `[요청 처리 성공] ${ Date.now() - before}/ms [${path} : ${method}]`)),
             catchError((err, _) => {
                 this.handleException(
                     `[요청 처리 실패] ${ Date.now() - before}/ms`, 
@@ -38,14 +39,17 @@ export class LoggingInterceptor implements NestInterceptor {
     }
 
     handleException(logmessage: string, err: any) {
+        console.log(logmessage)
+
         if(err instanceof InternalServerErrorException) {
             const res = err.getResponse()
             if(typeof res === 'string') {
                 console.log(`Path: ${err['path']} ${res['path']}\nResponse: ${res}`)
+                FileSystem.append("logs", "api_log.txt", logmessage + "\n" + `Path: ${err['path']} ${res['path']}\nResponse: ${res}`)
             } else {
                 console.log(`Path: ${err['path']} ${res['path']}\nReason: ${res['reason']}\nmessage: ${res['message']}`)
+                FileSystem.append("logs", "api_log.txt", logmessage + "\n" + `Path: ${err['path']} ${res['path']}\nReason: ${res['reason']}\nmessage: ${res['message']}`)
             }
-        } else console.log(err)
-        console.log(logmessage)
+        } else FileSystem.append("logs", "api_log.txt", logmessage + "\n" + `Error: ${err}`)
     }
 }
