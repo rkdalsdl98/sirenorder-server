@@ -22,26 +22,15 @@
 ### 1.2 Store (Desktop APP)  
 *  Socket.IO를 이용한 통신으로 실시간 주문요청, 주문정보 조회, 서버와의 재연결 요청  
 
-## 2 DB  
+## 2 Diagrams  
 
-### 2.1 ERD  
-
-<img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/134096be-e23a-41a3-b4ea-28a4cf9530dd">  
-
-## 3 Diagram  
-
-<div>
-  <h3> 3.1 User</h3>  
-  <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/15e379b9-b262-442f-86b6-5790d4bbc1e7"> 
-
-  <h3> 3.2 Merchant & Store</h3>   
-  <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/5677be6d-c319-471a-92a3-1408ea39dfcc"> <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/c2389ff4-adab-4527-8bef-8cfded265e09">  
-  <h3> 3.3 SSE</h3>  
-  <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/6f60c0e1-cfcb-4ea2-80ec-186335af077b"> <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/77210c80-42cb-4c76-aa29-082cd135f142">   
-  <h3> 3.4 Socket</h3>  
-  <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/4afaa450-ee98-473e-b1a4-7f55fe6c2340">  
-  <h3> 3.5 Payment</h3>  
-  <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/86cdfea0-bfff-4b20-ab51-98b074872daf">
+<div align="cetner">
+  <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/134096be-e23a-41a3-b4ea-28a4cf9530dd" width="200" height="355">  
+  <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/15e379b9-b262-442f-86b6-5790d4bbc1e7" width="200" height="355"> 
+  <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/5677be6d-c319-471a-92a3-1408ea39dfcc" width="200" height="355"> <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/c2389ff4-adab-4527-8bef-8cfded265e09" width="200" height="355">  
+  <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/6f60c0e1-cfcb-4ea2-80ec-186335af077b" width="200" height="355"> <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/77210c80-42cb-4c76-aa29-082cd135f142" width="200" height="355">   
+  <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/4afaa450-ee98-473e-b1a4-7f55fe6c2340" width="200" height="355">  
+  <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/86cdfea0-bfff-4b20-ab51-98b074872daf" width="200" height="355">
 </div>  
 
 ## 4 CI/CD  
