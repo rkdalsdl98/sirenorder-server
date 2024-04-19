@@ -78,36 +78,31 @@ describe("[유저] 유닛테스트", () => {
         pass: "123456789",
         nickname: "Tester",
     }
+    const mails = {}
 
     describe("유저 생성", () => {
         it("인증 메일 전송", async () => {
-            jest.spyOn(service, "registUser").mockImplementation(async (
+            const sendMail = jest.fn()
+            sendMail.mockImplementation((secret: string, to: string) => mails[to] = secret)
+
+            jest.spyOn(service, "publishCode").mockImplementation(async (
                 email: string,
                 pass: string,
                 nickname: string,
             ) => {
-                let result : boolean = true
                 const { salt, hash } = auth.encryption({ pass })
                 const code = "123456"
                 redis[code] = { salt, hash, nickname, email }
 
-                await mailer.sendMail({
-                    secret: code,
-                    title: "Siren Order 회원가입 인증 코드",
-                    to: email
-                }).catch(e=> {
-                    console.log("메일 전송실패")
-                    console.log(e)
-                    result = false
-                })
-                return result
+                sendMail(code, email)
+                return mails[email]
             })
     
-            expect(await service.registUser(
+            expect(await service.publishCode(
                 registOptions.email,
                 registOptions.pass,
                 registOptions.nickname,
-            )).toEqual(true)
+            )).toEqual("123456")
         })
         
         it("인증 코드 검증", async () => {
@@ -123,8 +118,8 @@ describe("[유저] 유닛테스트", () => {
                         wallet: null,
                         gifts: [],
                         coupons: [],
-                        order: null,
                         orderhistory: [],
+                        tel: "010-1234-5678",
                         accesstoken: null,
                         refreshtoken: null,
                         createdAt: new Date(Date.now()),

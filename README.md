@@ -15,14 +15,31 @@
 ## 1 Features  
 
 ### 1.1 User (APP)  
-* 회원가입시 NodeMailer와 Redis 캐싱을 이용한 메일 인증
-* AccessToken, RefreshToken을 사용해 보안성 증가와 서버 부하감소
-* SSE 방식으로 서버의 상태와 실시간 알림(주문상태, 공지사항 등등)을 받음  
+* 영업중인 가게에 주문요청을 넣을 수 있음  
+* 실시간으로 내 주문의 상태와 알림 사항을 확인  
+* 상품 구매 시 포인트를 사용해 금액을 할인 하거나 포인트 만으로 구매 가능  
+* 발급받은 쿠폰으로 상품 구매 가능 (구매 누적 스탬프 쿠폰 발행 등)  
+
+[APP Repository 이동하기](https://github.com/rkdalsdl98/sirenorder-app)
 
 ### 1.2 Store (Desktop APP)  
-*  Socket.IO를 이용한 통신으로 실시간 주문요청, 주문정보 조회, 서버와의 재연결 요청  
+* 실시간 주문요청 확인  
+* 실시간 주문 상태 변경 및 주문 취소  
+* 주문정보 조회  
+* 서버와의 연결상태 표시  
+
+[Desktop Repository 이동하기](https://github.com/rkdalsdl98/sirenorder-desktop)
+
+### 1.3 Server  
+* AccessToken, RefreshToken을 사용해 보안성 증가와 서버 부하감소  
+* 회원가입시 NodeMailer와 Redis 캐싱을 이용한 메일 인증    
+* 요청의 대한 결과를 .txt 파일형식으로 기록  
+* Guard로 비 정상적인 접근, 비 정상적인 데이터 입력 등 방지  
+* Swagger로 API 문서화  
 
 ## 2 Diagrams  
+
+> 이미지를 클릭하시면 확대해서 보실 수 있습니다.  
 
 <div align="cetner">
   <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/134096be-e23a-41a3-b4ea-28a4cf9530dd" width="355" height="200">  
@@ -33,8 +50,8 @@
   <img src="https://github.com/rkdalsdl98/sirenorder-server/assets/77562358/86cdfea0-bfff-4b20-ab51-98b074872daf" width="355" height="200">
 </div>  
 
-## 4 CI/CD  
-* GitHub Action (CI)
+## 3 CI/CD  
+* GitHub Action (CI)  
 * Docker (CD)  
 
 ### 부가적인 내용  
