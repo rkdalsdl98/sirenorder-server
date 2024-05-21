@@ -15,27 +15,33 @@
 ## 1 Features  
 
 ### 1.1 User (APP)  
-* 영업중인 가게에 주문요청을 넣을 수 있음  
-* 실시간으로 내 주문의 상태와 알림 사항을 확인  
-* 상품 구매 시 포인트를 사용해 금액을 할인 하거나 포인트 만으로 구매 가능  
-* 발급받은 쿠폰으로 상품 구매 가능 (구매 누적 스탬프 쿠폰 발행 등)  
+* 전체 메뉴, 나만의 메뉴 페이지 구현  
+* 쿠폰함 페이지 구현  
+* 쿠폰 선물하기, 등록하기, 사용하기 기능 구현  
+* 선물함 페이지 구현  
+* 선물 상세 페이지 구현  
+* 구매 내역 페이지 구현  
+* 주문하기 페이지 구현  
+* 회원가입, 로그인 페이지 구현  
 
 [APP Repository 이동하기](https://github.com/rkdalsdl98/sirenorder-app)
 
 ### 1.2 Store (Desktop APP)  
-* 실시간 주문요청 확인  
-* 실시간 주문 상태 변경 및 주문 취소  
-* 주문정보 조회  
-* 서버와의 연결상태 표시  
+* 로그인, 회원가입 페이지 구현  
+* 서버와 Socket.IO 연동 구현  
+* 들어온 주문을 실시간으로 확인 할 수 있는 주문 알림과 수락한 주문을 관리 할 수 있는 주문 목록 페이지 구현  
+* 서버와의 연결 상태를 실시간으로 알 수 있는 상태 표시 구현  
 
 [Desktop Repository 이동하기](https://github.com/rkdalsdl98/sirenorder-desktop)
 
 ### 1.3 Server  
-* AccessToken, RefreshToken을 사용해 보안성 증가와 서버 부하감소  
-* 회원가입시 NodeMailer와 Redis 캐싱을 이용한 메일 인증    
-* 요청의 대한 결과를 .txt 파일형식으로 기록  
-* Guard로 비 정상적인 접근, 비 정상적인 데이터 입력 등 방지  
-* Swagger로 API 문서화  
+* JWT 토큰 인증 파이프 구현  
+* NodeMailer를 이용한 메일 인증 구현  
+* 요청부터 응답까지의 시간, 요청 Route, 결과, 이유 등을 기록하는 로그구현  
+* Socket.IO를 사용해 상인과의 통신 프로토콜 구현  
+* SSE와 rxjs를 사용해 실시간 알림 서비스 구현  
+* PortOne API로 실 결제 테스트 환경 구현  
+* Nestia Swagger를 사용해 API 문서화  
 
 ## 2 Diagrams  
 
